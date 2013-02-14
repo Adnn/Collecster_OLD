@@ -22,8 +22,9 @@ class Content(models.Model):
 
 class Release(models.Model):
     realised_concept = models.ForeignKey(Concept)
-    specificity = models.CharField(max_length=60)
-    content = models.ManyToManyField(Content)
+    specificity = models.CharField(max_length=60, blank=True)
+    content = models.ManyToManyField(Content, blank=True)
+    nested_releases = models.ManyToManyField('self', blank=True)
 
     def __unicode__(self):
         return self.realised_concept.usual_name

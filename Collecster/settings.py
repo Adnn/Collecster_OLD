@@ -120,6 +120,8 @@ INSTALLED_APPS = (
     # Uncomment the next line to enable admin documentation:
     # 'django.contrib.admindocs',
     'Datamanager',
+
+    'south',
 )
 
 # A sample logging configuration. The only tangible logging
@@ -153,5 +155,5 @@ LOGGING = {
 
 try:
     from localsettings import *
-expect ImportError:
+except ImportError:
     pass
