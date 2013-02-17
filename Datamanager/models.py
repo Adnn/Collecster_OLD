@@ -34,7 +34,8 @@ class ReleaseComposition(models.Model):
 
 class Instance(models.Model):
     instanciated_release = models.ForeignKey(Release)
-    price = models.FloatField(blank=True)
+    price = models.FloatField(blank=True, null=True)
+    composed_instance = models.ForeignKey('self', blank=True, null=True)
 
     def __unicode__(self):
         return str(self.id)+' '+str(self.instanciated_release)
@@ -43,6 +44,10 @@ class InstanceAttribute(models.Model):
     instance = models.ForeignKey(Instance)
     attribute = models.ForeignKey(Attribute)
     value = models.CharField(max_length=60)
+
+class InstanceComposition(models.Model):
+    container_instance = models.ForeignKey(Instance, related_name="container_instance")
+    element_instance = models.ForeignKey(Instance)
 
 # Application specific code starts here 
 class Console(Release):

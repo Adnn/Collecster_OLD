@@ -1,7 +1,11 @@
-<form action="/console/add" method="post">
+<form action="{{ form_action }}" method="post">
+{% csrf_token %}
 {{ form.as_p }}
 {{ form2.as_p }}
 
-{{ formset}}
+{{ formset_attributes }}
+<br/>
+{{ formset_composition }}
+
 <input type="submit" value="Submit" />
 </form>
