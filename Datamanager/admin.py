@@ -23,26 +23,30 @@ class ConsoleAdmin(ReleaseAdmin):
 class InstanceAttributeInline(admin.StackedInline):
     model = InstanceAttribute      
 
+class InstanceCompositionInline(admin.StackedInline):
+    model = InstanceComposition
+    fk_name = 'container_instance'
+
 from django import forms
 from django.forms.formsets import formset_factory
 class TestForm(forms.Form):
     title = forms.CharField()
 
 class InstanceAdmin(admin.ModelAdmin):
-    def get_form(self, request, obj=None, **kwargs):
+    """def get_form(self, request, obj=None, **kwargs):
         self.inlines += [ InstanceAttributeInline,]
         return super(InstanceAdmin, self).get_form(request, obj, **kwargs)
-
-    def get_formsets(self, request, obj=None):
+        """
+    """def get_formsets(self, request, obj=None):
         #yield InstanceAttributeInline
         for inline in self.get_inline_instances(request):
             print "B\n"
             #yield inline.get_formset(request, obj)
             yield InstanceAttributeInline(Instance, admin.site).get_formset(request, obj)
-     
+            """ 
     def get_inline_instances(self, request):
         InstanceAttributeInline.extra = 1 
-        self.inlines = [InstanceAttributeInline]
+        self.inlines = [InstanceAttributeInline, InstanceCompositionInline]
         inline_instances = super(InstanceAdmin, self).get_inline_instances(request)
         
         for inline in inline_instances:

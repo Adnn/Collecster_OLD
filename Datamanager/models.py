@@ -35,7 +35,6 @@ class ReleaseComposition(models.Model):
 class Instance(models.Model):
     instanciated_release = models.ForeignKey(Release)
     price = models.FloatField(blank=True, null=True)
-    composed_instance = models.ForeignKey('self', blank=True, null=True)
 
     def __unicode__(self):
         return str(self.id)+' '+str(self.instanciated_release)
