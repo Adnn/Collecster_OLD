@@ -19,13 +19,15 @@ class InstanceForm(forms.ModelForm):
         self.fields['instanciated_release'].queryset = Release.objects.filter(id=release_id)
 
 class InstanceAttributeModelForm(forms.ModelForm):
+    init = False
     form_id = 0
     initial_attributes = []
 
     def __init__(self, *args, **kwargs):
         super(InstanceAttributeModelForm, self).__init__(*args, **kwargs)
         attribute = InstanceAttributeModelForm.initial_attributes[InstanceAttributeModelForm.form_id]
-        self.initial = attribute
+        if InstanceAttributeModelForm.init:
+            self.initial = attribute
         self.fields['attribute'].queryset = Attribute.objects.filter(id=attribute['attribute'].id)
         InstanceAttributeModelForm.form_id += 1
 
@@ -70,6 +72,7 @@ def add_instance(request, release_id):
     #We are using Class attributes to pass parameters to forms __init__
     InstanceForm.release_id = release_id
     
+    InstanceAttributeModelForm.init = False
     InstanceAttributeModelForm.form_id = 0
     InstanceAttributeModelForm.initial_attributes = initial_attributes
     #We get the factory for an inlineformset (derived from modelformset) that is modeling InstanceAttribute and links it to an Instance
@@ -113,6 +116,7 @@ def add_instance(request, release_id):
 
         #with modelformset (and derived inlineformset), initial values only apply to extra forms : so we have to allow the exact number of extra forms matching the number of initials.
 #Only necessary first time page is loaded (post data will later autopopulate the approriate number of forms)
+        InstanceAttributeModelForm.init = True
         InstanceAttributeFormset.extra=attributes_count
         formset_attributes = InstanceAttributeFormset()
         """Initial values now given in form __init__()"""
