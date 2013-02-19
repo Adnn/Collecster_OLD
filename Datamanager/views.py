@@ -152,5 +152,37 @@ def add_instance(request, release_id):
 def print_instance(request, instance_id):
     release_id = Instance.objects.get(id=instance_id).instanciated_release.id 
     derived_release = Release.objects.get_subclass(id=release_id)
+
+    import qrcode
+    from PIL import Image, ImageDraw 
+
+    qr = qrcode.QRCode(
+        box_size=2,
+    )
+    qr.add_data(str(instance_id))
+    qr_image = qr.make_image()._img
     
+    width = 180
+    height = 60
+    border_size = 1
+    final_image = Image.new('RGB', (width, height), (255, 255, 255))
+    draw = ImageDraw.Draw(final_image)
+    #the image border
+    draw.rectangle([(0,0), (width-1, height-1)], outline=(0,0,0))
+
+    text_color = (255, 0, 0)
+    draw.text((2, 1), derived_release.realised_concept.usual_name, fill=text_color)
+
+    spot_color = (0, 255, 0)
+    draw.ellipse([5,45,15,55], fill=spot_color)
+
+    work_string = 'work'
+    work_len = draw.textsize(work_string)[0]
+    draw.text([25, 45], work_string, fill='black')
+    draw.rectangle([25+work_len+2, 45, 35+work_len+2, 55], outline='black')
+
+    final_image.paste(qr_image, (width-border_size-qr_image.size[0], border_size))
+    
+    final_image.show() 
+
     return HttpResponse(str(derived_release)) 
