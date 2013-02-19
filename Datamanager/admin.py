@@ -30,6 +30,9 @@ class InstanceCompositionInline(admin.StackedInline):
 class InstancePictureInline(admin.StackedInline):
     model = InstancePicture
 
+class ConsoleSpecificsInline(admin.StackedInline):
+    model = ConsoleSpecifics
+
 from django import forms
 from django.forms.formsets import formset_factory
 class TestForm(forms.Form):
@@ -49,7 +52,7 @@ class InstanceAdmin(admin.ModelAdmin):
             """ 
     def get_inline_instances(self, request):
         InstanceAttributeInline.extra = 1 
-        self.inlines = [InstanceAttributeInline, InstanceCompositionInline, InstancePictureInline]
+        self.inlines = [InstanceAttributeInline, InstanceCompositionInline, InstancePictureInline, ConsoleSpecificsInline]
         inline_instances = super(InstanceAdmin, self).get_inline_instances(request)
         
         for inline in inline_instances:

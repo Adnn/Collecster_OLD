@@ -63,10 +63,19 @@ class InstanceAttribute(models.Model):
 
 class InstanceComposition(models.Model):
     container_instance = models.ForeignKey(Instance, related_name="container_instance")
-    element_instance = models.ForeignKey(Instance)
+    element_instance = models.ForeignKey(Instance, unique=True)
+
 
 # Application specific code starts here 
+class ConsoleSpecifics(models.Model):
+    #unique to simulate one-to-one relationship
+    instance = models.ForeignKey(Instance, unique=True)
+    modded = models.BooleanField()
+
 class Console(Release):
+    class Dna:
+        specifics = ConsoleSpecifics
+
     version = models.CharField(max_length=60)
 
     def __unicode__(self):

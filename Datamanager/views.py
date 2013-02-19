@@ -52,7 +52,10 @@ def save_all(instance, form, formsets):
 
 
 def add_instance(request, release_id):
-    instanciated_release = Release.objects.get(id=release_id)
+    #instanciated_release = Release.objects.get(id=release_id)
+    instanciated_release = Release.objects.get_subclass(id=release_id)
+    DerivedInstance = type(instanciated_release)
+    print DerivedInstance
 
     initial_attributes = []
     attributes_count = 0
@@ -68,21 +71,33 @@ def add_instance(request, release_id):
         composition_count += 1
      
     formsets = []
+    formset_factories = []
 
     #We are using Class attributes to pass parameters to forms __init__
     InstanceForm.release_id = release_id
     
-    InstanceAttributeModelForm.init = False
+    #Only necessary first time page is loaded (post data will later autopopulate the approriate number of forms)
+    InstanceAttributeModelForm.init = request.method == 'GET'
     InstanceAttributeModelForm.form_id = 0
     InstanceAttributeModelForm.initial_attributes = initial_attributes
     #We get the factory for an inlineformset (derived from modelformset) that is modeling InstanceAttribute and links it to an Instance
-    InstanceAttributeFormset = inlineformset_factory(Instance, InstanceAttribute, form=InstanceAttributeModelForm, can_delete=False)
+    #with modelformset (and derived inlineformset), initial values only apply to extra forms : so we have to allow the exact number of extra forms matching the number of initials.
+    InstanceAttributeFormset = inlineformset_factory(Instance, InstanceAttribute, form=InstanceAttributeModelForm, can_delete=False, extra=attributes_count)
 
     InstanceCompositionModelForm.form_id = 0
     InstanceCompositionModelForm.composing_releases_ids = composing_releases_id
-    InstanceCompositionFormset = inlineformset_factory(Instance, InstanceComposition, form=InstanceCompositionModelForm, fk_name='container_instance',  can_delete=False)
+    InstanceCompositionFormset = inlineformset_factory(Instance, InstanceComposition, form=InstanceCompositionModelForm, fk_name='container_instance',  can_delete=False, extra=composition_count)
 
     InstancePictureFormset = inlineformset_factory(Instance, InstancePicture, can_delete=False, extra=3)
+    #The pythonic insane EAFP ... (http://stackoverflow.com/questions/610883/how-to-know-if-an-object-has-an-attribute-in-python)
+    #We check if the DerivedRelease class has a specifics, and show an inline formset if it's the case
+    try:
+        InstanceSpecificsFormset = inlineformset_factory(Instance, DerivedInstance.Dna.specifics, can_delete=False, extra=1, max_num=1)
+        formset_factories.append(InstanceSpecificsFormset)
+    except AttributeError:
+        pass
+
+    formset_factories += [InstanceAttributeFormset, InstanceCompositionFormset, InstancePictureFormset]
 
     #if the form was submitted (false on first page load)
     if request.method == 'POST':
@@ -96,13 +111,9 @@ def add_instance(request, release_id):
             new_instance = Instance()
             form_validated = False
 
-        formset_attributes = InstanceAttributeFormset(request.POST, instance=new_instance)
-        formset_composition = InstanceCompositionFormset(request.POST, instance=new_instance)
-        formset_pictures = InstancePictureFormset(request.POST, request.FILES, instance=new_instance)
+        for factory in formset_factories:
+            formsets.append(factory(request.POST, request.FILES, instance=new_instance))
 
-        formsets.append(formset_attributes)
-        formsets.append(formset_composition)
-        formsets.append(formset_pictures)
         if all_valid(formsets) and form_validated:
             save_all(new_instance, form, formsets)
             return HttpResponseRedirect('/dm/instance/print/'+str(new_instance.id)+'/')
@@ -120,11 +131,8 @@ def add_instance(request, release_id):
             (u'B', u'B'),
         ))"""
 
-        #with modelformset (and derived inlineformset), initial values only apply to extra forms : so we have to allow the exact number of extra forms matching the number of initials.
-#Only necessary first time page is loaded (post data will later autopopulate the approriate number of forms)
-        InstanceAttributeModelForm.init = True
-        InstanceAttributeFormset.extra=attributes_count
-        formset_attributes = InstanceAttributeFormset()
+        #InstanceAttributeFormset.extra=attributes_count
+        #formset_attributes = InstanceAttributeFormset()
         """Initial values now given in form __init__()"""
         #formset_attributes = InstanceAttributeFormset(initial=initial_attributes)
         """ Queryset restriction now done in form __init__()"""
@@ -132,21 +140,28 @@ def add_instance(request, release_id):
         #    subform.fields['attribute'].queryset = Attribute.objects.filter(id=attribute['attribute'].id)
 
     
-        InstanceCompositionFormset.extra=composition_count
-        formset_composition = InstanceCompositionFormset()
+        #InstanceCompositionFormset.extra=composition_count
+        #formset_composition = InstanceCompositionFormset()
         """ Queryset restriction now done in form __init__()"""
         #for subform, release_index in zip(formset_composition.forms, composing_releases_id):
         #    subform.fields['element_instance'].queryset = Instance.objects.filter(instanciated_release=release_index)
 
-        formset_pictures = InstancePictureFormset()
+        #formset_pictures = InstancePictureFormset()
 
+        formset_specifics = InstanceSpecificsFormset()
+        for factory in formset_factories:
+            formsets.append(factory())
+
+    print formsets[0].as_p()
     form_action = '/dm/instance/add/'+str(release_id)+'/'
     return render(request, 'add_instance.html', {
         'form_action' : form_action,
         'form': form,
-        'formset_attributes' : formset_attributes,
-        'formset_composition' : formset_composition,
-        'formset_pictures' : formset_pictures,
+        'formsets' : formsets,
+        #'formset_attributes' : formset_attributes,
+        #'formset_composition' : formset_composition,
+        #'formset_pictures' : formset_pictures,
+        #'formset_specifics' : formset_specifics,
     })
 
 def print_instance(request, instance_id):
