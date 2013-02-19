@@ -1,4 +1,4 @@
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render, render_to_response
 from django.forms.models import modelformset_factory, inlineformset_factory
 
@@ -105,6 +105,7 @@ def add_instance(request, release_id):
         formsets.append(formset_pictures)
         if all_valid(formsets) and form_validated:
             save_all(new_instance, form, formsets)
+            return HttpResponseRedirect('/dm/instance/print/'+str(new_instance.id)+'/')
 
     else:
         """Initial values now given in InstanceForm __init__()"""
@@ -147,4 +148,9 @@ def add_instance(request, release_id):
         'formset_composition' : formset_composition,
         'formset_pictures' : formset_pictures,
     })
+
+def print_instance(request, instance_id):
+    release_id = Instance.objects.get(id=instance_id).instanciated_release.id 
+    derived_release = Release.objects.get_subclass(id=release_id)
     
+    return HttpResponse(str(derived_release)) 

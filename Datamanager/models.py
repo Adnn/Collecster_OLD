@@ -1,4 +1,6 @@
 from django.db import models
+from model_utils.managers import InheritanceManager
+
 
 class Concept(models.Model):
     usual_name = models.CharField(max_length=60)
@@ -24,6 +26,7 @@ class Release(models.Model):
     realised_concept = models.ForeignKey(Concept)
     specificity = models.CharField(max_length=60, blank=True)
     attribute = models.ManyToManyField(Attribute, blank=True)
+    objects = InheritanceManager()
 
     def __unicode__(self):
         return self.realised_concept.usual_name
@@ -65,6 +68,9 @@ class InstanceComposition(models.Model):
 # Application specific code starts here 
 class Console(Release):
     version = models.CharField(max_length=60)
+
+    def __unicode__(self):
+        return '[console] ' + str(self.id) + " " + super(Console, self).__unicode__()
    
 class Game(Release):
     region = (
