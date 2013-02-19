@@ -39,6 +39,20 @@ class Instance(models.Model):
     def __unicode__(self):
         return str(self.id)+' '+str(self.instanciated_release)
 
+class PictureCategory(models.Model):
+    name = models.CharField(max_length=60)
+
+def name_picture(instance_picture, filename):
+    #The instance picture related instance has already been saved to the DB when we save the instance picture
+    path = 'instances_pictures/' + str(instance_picture.instance.id) + '/' + filename 
+    print path
+    return path
+
+class InstancePicture(models.Model):
+    instance = models.ForeignKey(Instance)
+    image = models.ImageField(upload_to=name_picture)
+    category = models.ForeignKey(PictureCategory, blank=True, null=True)
+
 class InstanceAttribute(models.Model):
     instance = models.ForeignKey(Instance)
     attribute = models.ForeignKey(Attribute)

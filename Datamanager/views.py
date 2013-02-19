@@ -82,10 +82,12 @@ def add_instance(request, release_id):
     InstanceCompositionModelForm.composing_releases_ids = composing_releases_id
     InstanceCompositionFormset = inlineformset_factory(Instance, InstanceComposition, form=InstanceCompositionModelForm, fk_name='container_instance',  can_delete=False)
 
+    InstancePictureFormset = inlineformset_factory(Instance, InstancePicture, can_delete=False, extra=3)
+
     #if the form was submitted (false on first page load)
     if request.method == 'POST':
         #repopulate the form with posted data
-        form = InstanceForm(request.POST)
+        form = InstanceForm(request.POST, request.FILES)
         if form.is_valid():
             #We need the instance model to bind it to the inlineformset [which needs to know the foreign key], but we do not save it to the DB yet using 'commit=False'
             new_instance = form.save(commit=False)
@@ -96,11 +98,14 @@ def add_instance(request, release_id):
 
         formset_attributes = InstanceAttributeFormset(request.POST, instance=new_instance)
         formset_composition = InstanceCompositionFormset(request.POST, instance=new_instance)
+        formset_pictures = InstancePictureFormset(request.POST, request.FILES, instance=new_instance)
 
         formsets.append(formset_attributes)
         formsets.append(formset_composition)
+        formsets.append(formset_pictures)
         if all_valid(formsets) and form_validated:
             save_all(new_instance, form, formsets)
+
     else:
         """Initial values now given in InstanceForm __init__()"""
         #form = InstanceForm(initial={'instanciated_release' : instanciated_release,})
@@ -132,11 +137,14 @@ def add_instance(request, release_id):
         #for subform, release_index in zip(formset_composition.forms, composing_releases_id):
         #    subform.fields['element_instance'].queryset = Instance.objects.filter(instanciated_release=release_index)
 
+        formset_pictures = InstancePictureFormset()
+
     form_action = '/dm/instance/add/'+str(release_id)+'/'
     return render(request, 'add_instance.html', {
         'form_action' : form_action,
         'form': form,
         'formset_attributes' : formset_attributes,
-        'formset_composition' : formset_composition
+        'formset_composition' : formset_composition,
+        'formset_pictures' : formset_pictures,
     })
     

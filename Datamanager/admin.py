@@ -27,6 +27,9 @@ class InstanceCompositionInline(admin.StackedInline):
     model = InstanceComposition
     fk_name = 'container_instance'
 
+class InstancePictureInline(admin.StackedInline):
+    model = InstancePicture
+
 from django import forms
 from django.forms.formsets import formset_factory
 class TestForm(forms.Form):
@@ -46,7 +49,7 @@ class InstanceAdmin(admin.ModelAdmin):
             """ 
     def get_inline_instances(self, request):
         InstanceAttributeInline.extra = 1 
-        self.inlines = [InstanceAttributeInline, InstanceCompositionInline]
+        self.inlines = [InstanceAttributeInline, InstanceCompositionInline, InstancePictureInline]
         inline_instances = super(InstanceAdmin, self).get_inline_instances(request)
         
         for inline in inline_instances:
