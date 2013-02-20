@@ -11,6 +11,7 @@ class CompositionInline(admin.StackedInline):
 
 #Create a common admin ancestor for all derived Releases models to inherit.
 class ReleaseAdmin(admin.ModelAdmin): 
+    list_display = ('id', str)
     inlines = [
         CompositionInline,
     ] 
@@ -62,8 +63,13 @@ class InstanceAdmin(admin.ModelAdmin):
 
 admin.site.register(Concept)
 admin.site.register(Console, ConsoleAdmin)
+admin.site.register(Game)
+admin.site.register(Accessory)
+admin.site.register(Platform)
 admin.site.register(Attribute)
 admin.site.register(AttributeCategory)
+admin.site.register(Company)
 
 #to del
 admin.site.register(Instance, InstanceAdmin)
+admin.site.register(Release, ReleaseAdmin)

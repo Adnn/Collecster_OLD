@@ -148,7 +148,7 @@ def add_instance(request, release_id):
 
         #formset_pictures = InstancePictureFormset()
 
-        formset_specifics = InstanceSpecificsFormset()
+        #formset_specifics = InstanceSpecificsFormset()
         for factory in formset_factories:
             formsets.append(factory())
 
