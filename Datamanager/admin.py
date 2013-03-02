@@ -1,6 +1,7 @@
 from Datamanager.models import * 
 from django.contrib import admin
 from django.db import models
+from django import forms
 
 #Define an InlineAdminModel on ReleaseCompostion in order to add compositions directly on 'add Release' pages
 class CompositionInline(admin.StackedInline):
@@ -34,6 +35,20 @@ class InstancePictureInline(admin.StackedInline):
 class ConsoleSpecificsInline(admin.StackedInline):
     model = ConsoleSpecifics
 
+#Solution to allow the duplication of 'empty' common_name values (unique otherwise)
+#from SO : http://stackoverflow.com/questions/454436/unique-fields-that-allow-nulls-in-django
+class ConceptForm(forms.ModelForm):
+    class Meta:
+        model = Concept
+    def clean_complete_name(self):
+        name = self.cleaned_data['complete_name']
+        if name == '':
+            name = None
+        return name 
+
+class ConceptAdmin(admin.ModelAdmin):
+    form = ConceptForm
+
 from django import forms
 from django.forms.formsets import formset_factory
 class TestForm(forms.Form):
@@ -61,7 +76,7 @@ class InstanceAdmin(admin.ModelAdmin):
             pass
         return inline_instances
 
-admin.site.register(Concept)
+admin.site.register(Concept, ConceptAdmin)
 admin.site.register(Console, ConsoleAdmin)
 admin.site.register(Game)
 admin.site.register(Accessory)
