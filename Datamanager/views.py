@@ -41,6 +41,15 @@ class InstanceCompositionModelForm(forms.ModelForm):
         release_index = InstanceCompositionModelForm.composing_releases_ids[InstanceCompositionModelForm.form_id]
         self.fields['element_instance'].queryset = Instance.objects.filter(instanciated_release=release_index)
         InstanceCompositionModelForm.form_id += 1
+
+# \todo : why do those classes work without Meta:model ?
+class SpecificsModelForm(forms.ModelForm):
+    #hacky solution from SO : http://stackoverflow.com/questions/3657709/how-to-force-save-an-empty-unchanged-django-admin-inline
+    def has_changed(self):
+        """ Should returns True if data differs from initial. 
+        By always returning true even unchanged inlines will get validated and saved."""
+        return True
+
          
 def save_all(instance, form, formsets):
     #Since we used 'commit=False' on form saving, we need to save the instance by hand, and also its many-2-many relationships
@@ -55,7 +64,6 @@ def add_instance(request, release_id):
     #instanciated_release = Release.objects.get(id=release_id)
     instanciated_release = Release.objects.get_subclass(id=release_id)
     DerivedInstance = type(instanciated_release)
-    print DerivedInstance
 
     initial_attributes = []
     attributes_count = 0
@@ -66,7 +74,8 @@ def add_instance(request, release_id):
     composing_releases_id = []
     composition_count = 0
     for nested_release in ReleaseComposition.objects.filter(container_release=instanciated_release):
-        # \todo : .id is not necessary for functionnality, but does it change the value stored in the list ?
+        # .id is not necessary for functionnality, but does it change the value stored in the list ?
+        # yes it does : it appends the element release itslef instead of its id
         composing_releases_id.append(nested_release.element_release.id)
         composition_count += 1
      
@@ -92,7 +101,7 @@ def add_instance(request, release_id):
     #The pythonic insane EAFP ... (http://stackoverflow.com/questions/610883/how-to-know-if-an-object-has-an-attribute-in-python)
     #We check if the DerivedRelease class has a specifics, and show an inline formset if it's the case
     try:
-        InstanceSpecificsFormset = inlineformset_factory(Instance, DerivedInstance.Dna.specifics, can_delete=False, extra=1, max_num=1)
+        InstanceSpecificsFormset = inlineformset_factory(Instance, DerivedInstance.Dna.specifics, form=SpecificsModelForm, can_delete=False, extra=1, max_num=1)
         formset_factories.append(InstanceSpecificsFormset)
     except AttributeError:
         pass
@@ -152,7 +161,6 @@ def add_instance(request, release_id):
         for factory in formset_factories:
             formsets.append(factory())
 
-    print formsets[0].as_p()
     form_action = '/dm/instance/add/'+str(release_id)+'/'
     return render(request, 'add_instance.html', {
         'form_action' : form_action,
@@ -165,39 +173,12 @@ def add_instance(request, release_id):
     })
 
 def print_instance(request, instance_id):
-    release_id = Instance.objects.get(id=instance_id).instanciated_release.id 
-    derived_release = Release.objects.get_subclass(id=release_id)
+    #release_id = Instance.objects.get(id=instance_id).instanciated_release.id 
+    #derived_release = Release.objects.get_subclass(id=release_id)
 
-    import qrcode
-    from PIL import Image, ImageDraw 
+    instance = Instance.objects.get(id=instance_id) 
+    tag_image = instance.generate_tag()
 
-    qr = qrcode.QRCode(
-        box_size=2,
-    )
-    qr.add_data(str(instance_id))
-    qr_image = qr.make_image()._img
-    
-    width = 180
-    height = 60
-    border_size = 1
-    final_image = Image.new('RGB', (width, height), (255, 255, 255))
-    draw = ImageDraw.Draw(final_image)
-    #the image border
-    draw.rectangle([(0,0), (width-1, height-1)], outline=(0,0,0))
+    tag_image.show() 
 
-    text_color = (255, 0, 0)
-    draw.text((2, 1), derived_release.realised_concept.usual_name, fill=text_color)
-
-    spot_color = (0, 255, 0)
-    draw.ellipse([5,45,15,55], fill=spot_color)
-
-    work_string = 'work'
-    work_len = draw.textsize(work_string)[0]
-    draw.text([25, 45], work_string, fill='black')
-    draw.rectangle([25+work_len+2, 45, 35+work_len+2, 55], outline='black')
-
-    final_image.paste(qr_image, (width-border_size-qr_image.size[0], border_size))
-    
-    final_image.show() 
-
-    return HttpResponse(str(derived_release)) 
+    return HttpResponse('See') 
