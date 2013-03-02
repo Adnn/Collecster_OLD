@@ -3,6 +3,8 @@ from django.contrib import admin
 from django.db import models
 from django import forms
 
+from Datamanager import settings
+
 #Define an InlineAdminModel on ReleaseCompostion in order to add compositions directly on 'add Release' pages
 class CompositionInline(admin.StackedInline):
     model = ReleaseComposition
@@ -12,10 +14,16 @@ class CompositionInline(admin.StackedInline):
 
 #Create a common admin ancestor for all derived Releases models to inherit.
 class ReleaseAdmin(admin.ModelAdmin): 
-    list_display = ('id', str)
+    list_display = ('id', str, 'instanciate_link')
     inlines = [
         CompositionInline,
     ] 
+
+    def instanciate_link(self, obj):
+        url = '/' + settings.URL_DM + settings.URL_ADD_INSTANCE+str(obj.id) + '/'
+        return '<a href="' + url + '">instanciate</a>' 
+    instanciate_link.allow_tags = True
+    instanciate_link.short_description = 'Add instance'
 
 class ConsoleAdmin(ReleaseAdmin):
     raw_id_fields = ("realised_concept",)
