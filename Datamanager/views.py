@@ -1,8 +1,13 @@
+import StringIO
+
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render, render_to_response
 from django.forms.models import modelformset_factory, inlineformset_factory
+from django.core.files.base import ContentFile 
 
+from django import conf
 from Datamanager.models import *
+from Datamanager import settings
 from django import forms
 from django.forms.formsets import all_valid
 
@@ -11,6 +16,8 @@ class InstanceForm(forms.ModelForm):
 
     class Meta:
         model = Instance
+        #used to hide the tag 'image upload' widget, since the tag will be auto generated in the print view
+        exclude = ('tag',)
 
     def __init__(self, *args, **kwargs):
         super(InstanceForm, self).__init__(*args, **kwargs)
@@ -173,12 +180,33 @@ def add_instance(request, release_id):
     })
 
 def print_instance(request, instance_id):
-    #release_id = Instance.objects.get(id=instance_id).instanciated_release.id 
-    #derived_release = Release.objects.get_subclass(id=release_id)
-
     instance = Instance.objects.get(id=instance_id) 
+
     tag_image = instance.generate_tag()
+    tag_io = StringIO.StringIO()
+    tag_image.save(tag_io, format='PNG')
 
-    tag_image.show() 
+    tag_file = ContentFile(tag_io.getvalue())
+    #Django is automatically prepending the MEDIA_ROOT to the 'upload_to' value during the default file upload workflow, here we have to do it by hand.
+    name = os.path.join(
+        conf.settings.MEDIA_ROOT, 
+        name_tag(instance),
+    )
 
-    return HttpResponse('See') 
+    #Delete the tag image if it already exists (django default behavior being to rename the file if there is a collision)
+    try:
+        os.remove(name)
+    except:
+        pass
+
+    instance.tag.save(name, tag_file)
+    #no clue if we have to close it by hand, better safe...
+    tag_file.close()
+
+    # replace() in an attempt to support Windows host and still return a valid url
+    #\todo : test the tag_url under Windows host
+    tag_url = os.path.join(conf.settings.MEDIA_URL, name_tag(instance)).replace('\\', '/')
+    return render(request, 'view_tag.html', {
+        'tag_url' : tag_url,
+        'form_action' : '/admin/Datamanager/'
+    })

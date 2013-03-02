@@ -12,6 +12,20 @@ from Datamanager import stringer
 from Datamanager import settings
 
 
+def get_instance_mediapath(instance):
+    return os.path.join(settings.PATH_MEDIA_INSTANCES, str(instance.id))
+
+def name_picture(instance_picture, filename):
+    #The instance picture related instance has already been saved to the DB when we save the instance picture
+    return os.path.join(get_instance_mediapath(instance_picture.instance), filename)
+
+def name_tag(instance, filename=None):
+    return os.path.join(
+        get_instance_mediapath(instance), 
+        settings.PATH_TAGFILE
+    )
+
+
 def generate_qr(id):
     qr = qrcode.QRCode(
         box_size = settings.TAG_QR_BOXSIZE,
@@ -45,7 +59,7 @@ def organize_tag(release_img, instance_img, qr_img, border=True):
         draw.rectangle([(0,0), (width-1, height-1)], outline='black') 
     
     final_image.paste(release_img, (border_size, border_size))
-#we want to put the instance details at the bottom edge
+    #we want to put the instance details at the bottom edge
     final_image.paste(instance_img, (border_size, height-border_size-instance_img.size[1]))
     final_image.paste(qr_img, (border_size+left_width, border_size))
     
@@ -102,12 +116,6 @@ class Origin():
         BUY_USAGE : (u'Buy usage', 'blue'),
         BUY_COLLEC : (u'Buy collection', 'red'),
     }
-
-    """ORIGIN = (
-        (ORIGINAL, u'Original'),
-        (BUY_USAGE, u'Buy usage'),
-        (BUY_COLLEC, u'Buy collection'),
-    )"""
 
     @classmethod
     def get_choices(cls):
@@ -182,7 +190,6 @@ class Release(models.Model):
         if complement:
             release_draw.text((left_pad, offset), complement, fill='black')
 
-
         return release_img
 
     """ An empty method in case the release subclass does not override it """
@@ -196,6 +203,7 @@ class ReleaseComposition(models.Model):
 
 class Instance(InstanceParent):
     instanciated_release = models.ForeignKey(Release)
+    tag = models.ImageField(upload_to=name_tag, blank=True)
 
     def __unicode__(self):
         return str(self.id)+' '+str(self.instanciated_release)
@@ -242,12 +250,6 @@ class Instance(InstanceParent):
 
 class PictureCategory(models.Model):
     name = models.CharField(max_length=60, unique=True)
-
-def name_picture(instance_picture, filename):
-    #The instance picture related instance has already been saved to the DB when we save the instance picture
-    path = 'images/instances/' + str(instance_picture.instance.id) + '/' + filename 
-    print path
-    return path
 
 class InstancePicture(models.Model):
     instance = models.ForeignKey(Instance)
