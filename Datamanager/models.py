@@ -1,8 +1,6 @@
 from django.db import models
 from model_utils.managers import InheritanceManager
 
-from south.modelsinspector import add_introspection_rules
-
 import qrcode
 from PIL import Image, ImageDraw
 
@@ -38,6 +36,12 @@ def get_textsize(text):
         dum_draw = ImageDraw.Draw(dum_img)
         return dum_draw.textsize(text)
 
+# \todo : implement a nice layout system instead of hardcoded positions (like flows in html  ; )
+""" Organize the final aspect of the printed tag (in a rather rigid way).
+The layout is divided in two columns.
+Takes: -a release_img (generic info about the release) and put it at the top of the left column.
+        -an instance_img (specific info about this instance) and put it at the bottom of the left columng.
+        -a qr_img and put it at the top of the right column.""" 
 def organize_tag(release_img, instance_img, qr_img, border=True):
     
     if border:
@@ -65,13 +69,16 @@ def organize_tag(release_img, instance_img, qr_img, border=True):
     
     return final_image
 
+#
+# Custom models
+#
 class Company(models.Model):
     name = models.CharField(max_length=60, unique=True)
 
     def __unicode__(self):
         return self.name
 
-class Concept(models.Model):
+class Subtype:
     class Category:
         CONSOLE = u'CONSOLE'
         GAME = u'GAME'
@@ -79,25 +86,79 @@ class Concept(models.Model):
 
     CONSOLE = Category.CONSOLE 
     GAME = Category.GAME
-    PAD = 'PAD'
-    ANALOG_PAD = 'ANALOG_PAD'
-    GUN = 'GUN'
-
-    TYPES_SUBTYPES = (
-        (CONSOLE, 'Console'),
-        (GAME, 'Game'),
-        ('Accessory', (
-            (PAD, 'Pad'),
-            (ANALOG_PAD, 'Analog pad'),
-            (GUN, 'Gun'),)
-        )
-    )
     
+    ANALOG_PAD = u'ANALOG_PAD'
+    BATTERY = u'BATTERY'
+    CAMERA = u'CAMERA'
+    COVER = u'COVER'
+    DANCEMAT = u'DANCEMAT'
+    DRUM = u'DRUM'
+    FISHING_ROD = u'FISHING_ROD'
+    GESTURE_RECO = u'GESTURE_RECO'
+    GUITAR = u'GUITAR'
+    GUN = u'GUN'
+    HEADPHONES = u'HEADPHONES'
+    JOYSTICK = u'JOYSTICK'
+    KEYBOARD = u'KEYBOARD'
+    MAGNIFIER = u'MAGNIFIER'
+    MEMORYCARD = u'MEMORYCARD'
+    MODEM = u'MODEM'
+    MOUSE = u'MOUSE'
+    MULTITAP = u'MULTITAP'
+    PAD = u'PAD'
+    PAD_CHARGER = u'PAD_CHARGER'
+    SPEAKERS = u'SPEAKERS'
+    STEERINGWHEEL = u'STEERINGWHEEL'
+    STEREOGLASSES = u'STEREOGLASSES'
+    TURNTABLE = u'TURNTABLE'
+
+    DICT = {
+        CONSOLE : ('Console', Category.CONSOLE),
+        GAME : ('Game', Category.GAME),
+
+        ANALOG_PAD : ('Analog pad', Category.ACCESSORY),
+        BATTERY : ('Battery', Category.ACCESSORY),
+        CAMERA : ('Camera', Category.ACCESSORY),
+        COVER : ('Cover', Category.ACCESSORY),
+        DANCEMAT : ('Dancemat', Category.ACCESSORY),
+        DRUM : ('Drum', Category.ACCESSORY),
+        FISHING_ROD : ('Fishing rod', Category.ACCESSORY),
+        GESTURE_RECO : ('Gesture', Category.ACCESSORY),
+        GUITAR : ('Guitar', Category.ACCESSORY),
+        GUN : ('Gun', Category.ACCESSORY),
+        HEADPHONES : ('Headphones', Category.ACCESSORY),
+        JOYSTICK : ('Joystick', Category.ACCESSORY),
+        KEYBOARD : ('Keyboard', Category.ACCESSORY),
+        MAGNIFIER : ('Magnifier', Category.ACCESSORY),
+        MEMORYCARD : ('Memorycard', Category.ACCESSORY),
+        MODEM : ('Modem', Category.ACCESSORY),
+        MOUSE : ('Mouse', Category.ACCESSORY),
+        MULTITAP : ('Multitap', Category.ACCESSORY),
+        PAD : ('Pad', Category.ACCESSORY),
+        PAD_CHARGER : ('Pad charger', Category.ACCESSORY),
+        SPEAKERS : ('Speakers', Category.ACCESSORY),
+        STEERINGWHEEL : ('Steeringwheel', Category.ACCESSORY),
+        STEREOGLASSES : ('Stereoglasses', Category.ACCESSORY),
+        TURNTABLE : ('Turntable', Category.ACCESSORY),
+     }
+
+    @classmethod
+    def get_choices(cls):
+        accessories = []
+        others = []
+        for key, value in cls.DICT.items():
+            if value[1]==cls.Category.ACCESSORY:
+                accessories.append((key, value[0]))
+            else:
+                others.append((key, value[0]))
+        return tuple(others) + (('Accessory', tuple(accessories)),)
+         
+class Concept(models.Model):
     common_name = models.CharField(max_length=60, unique=True)
     complete_name = models.CharField(max_length=180, unique=True, blank=True, null=True)
 
     company = models.ForeignKey(Company, blank=True, null=True)
-    category = models.CharField(max_length=20, choices=TYPES_SUBTYPES,)
+    category = models.CharField(max_length=20, choices=Subtype.get_choices())
 
     def __unicode__(self):
         return self.common_name
@@ -109,12 +170,17 @@ class Origin():
     ORIGINAL = u'OR'
     BUY_USAGE = u'BU'
     BUY_COLLEC = u'BC'
+    #For lost/stolen original elements...
+    BUY_AGAIN = u'BA'
+    GIFT = u'GF'
 
 #element :    key(=value to be stored in DB) : (web display value, tag spot color)
     ORIGIN_DICT = {
         ORIGINAL : (u'Original', 'green'),
         BUY_USAGE : (u'Buy usage', 'blue'),
         BUY_COLLEC : (u'Buy collection', 'red'),
+        BUY_AGAIN : (u'Buy back', 'yellow'),
+        GIFT : (u'Gift', 'pink'),
     }
 
     @classmethod
@@ -128,6 +194,7 @@ class InstanceParent(models.Model):
 
     price = models.FloatField(blank=True, null=True)
     origin = models.CharField(max_length=2, choices=Origin.get_choices())
+    notes = models.CharField(max_length=180, blank=True)
 
     def get_parent_tag(self):
         parent_image = Image.new('RGB', (20, settings.TAG_INSTANCEDETAIL_HEIGHT), 'white')
@@ -154,6 +221,8 @@ class Release(models.Model):
     realised_concept = models.ForeignKey(Concept)
     specificity = models.CharField(max_length=60, blank=True)
     attribute = models.ManyToManyField(Attribute, blank=True)
+    date = models.DateField()
+    
     objects = InheritanceManager()
 
     def __unicode__(self):
@@ -201,9 +270,19 @@ class ReleaseComposition(models.Model):
     container_release = models.ForeignKey(Release, related_name="container_release")
     element_release = models.ForeignKey(Release)
 
+class User(models.Model):
+    name = models.CharField(max_length=60)
+
+    def __unicode__(self):
+        return self.name
+
 class Instance(InstanceParent):
     instanciated_release = models.ForeignKey(Release)
     tag = models.ImageField(upload_to=name_tag, blank=True)
+
+    owner = models.ForeignKey(User)
+    add_date = models.DateTimeField(auto_now_add=True)
+    lastmodif_date = models.DateTimeField(auto_now=True)
 
     def __unicode__(self):
         return str(self.id)+' '+str(self.instanciated_release)
@@ -275,8 +354,65 @@ class AbstractSpecifics(models.Model):
         return 'for :: ' + str(self.instance) 
 
 
+#
+# Application specific code 
+#
+class Bundle(models.Model):
+    acquisition_date = models.DateField()
 
-# Application specific code starts here 
+    objects = InheritanceManager()
+
+class Country:
+    LITHUANIA = u'LT'
+    FRANCE = u'FR'
+    GERMANY = u'DE'
+    ITALY = u'IT'
+    JAPAN = u'JP'
+    SPAIN = u'ES'
+    UK = u'UK'
+    USA = u'US'
+    
+    CHOICES = (
+        (u'Europe', 
+            ((LITHUANIA, u'Lithuania'),
+            (FRANCE, u'France'),
+            (GERMANY, u'Germany'),
+            (ITALY, u'Italy'),
+            (SPAIN, u'Spain'),)
+        ),
+        (JAPAN, u'Japan'),
+        (UK, u'UK'),
+        (USA, u'USA'),
+    )
+        
+class Location(models.Model):
+    country = models.CharField(max_length=2, choices=Country.CHOICES)
+    city = models.CharField(max_length=60, unique=True)
+
+    def __unicode__(self):
+        return '['+self.country+'] ' + self.city
+
+class BuyingContext(models.Model):
+    name = models.CharField(max_length=60, unique=True)
+
+    def __unicode__(self):
+        return self.name
+
+class Buying(Bundle):
+    price = models.FloatField()
+    location = models.ForeignKey(Location)
+    context = models.ForeignKey(BuyingContext)
+
+    def __unicode__(self):
+        return str(self.acquisition_date) + ' ' + str(self.context)
+
+class Donation(Bundle):
+    donator = models.ForeignKey(User)
+
+class BundleComposition(models.Model):
+    bundle = models.ForeignKey(Bundle)
+    instance = models.ForeignKey(Instance, unique=True)
+
 class Region:
     EUROPE = u'EU'
     USA = u'US'
@@ -293,10 +429,32 @@ class Color:
     WHITE = u'WIT'
     GREY = u'GRY'
     RED = u'RED'
+    GREEN = u'GRN'
+    BLUE = u'BLU'
+    YELLOW = u'YEL'
+    ORANGE = u'ORA'
+    PINK = u'PIN'
+    BROWN = u'BRO'
+    PURPLE = u'PUR'
+
+    GOLD = u'GLD'
+    SILVER = u'SIL'
 
     CHOICES = (
         (BLACK, u'Black'),
         (WHITE, u'White'),
+        (GREY, u'Grey'),
+        (RED, u'Red'),
+        (GREEN, u'Green'),
+        (BLUE, u'Blue'),
+        (YELLOW, u'Yellow'),
+        (ORANGE, u'Orange'),
+        (PINK, u'Pink'),
+        (BROWN, u'Brown'),
+        (PURPLE, u'Purple'),
+
+        (GOLD, u'Gold'),
+        (SILVER, u'Silver'),
     )
 
 class WorkingState:
@@ -355,13 +513,15 @@ class ConsoleSpecifics(WorkingSpecifics):
 class Console(Release):
     class Dna:
         specifics = ConsoleSpecifics
-        category = Concept.Category.CONSOLE
+        category = Subtype.Category.CONSOLE
+        name_color = u'red'
 
-    version = models.CharField(max_length=20, blank=True, null=True)
     region = models.CharField(max_length=2, choices=Region.CHOICES) 
     color = models.CharField(max_length=3, choices=Color.CHOICES) 
     implemented_platforms = models.ManyToManyField(Platform)
 
+    version = models.CharField(max_length=20, blank=True, null=True)
+    constructor = models.ForeignKey(Company, blank=True, null=True)
 
     def __unicode__(self):
         return '[console] ' + str(self.id) + " " + super(Console, self).__unicode__()
@@ -375,12 +535,12 @@ class GameSpecifics(WorkingSpecifics):
 class Game(Release):
     class Dna:
         specifics = GameSpecifics
-        category = Concept.Category.GAME 
-        name_color = 'red'
+        category = Subtype.Category.GAME 
+        name_color = u'green'
 
     region = models.CharField(max_length=2, choices=Region.CHOICES) 
     platform = models.ForeignKey(Platform)
-    editor = models.ForeignKey(Company, blank=True, null=True)
+    publisher = models.ForeignKey(Company, blank=True, null=True)
 
 class AccessorySpecifics(WorkingSpecifics):
     pass
@@ -388,14 +548,13 @@ class AccessorySpecifics(WorkingSpecifics):
 class Accessory(Release):
     class Dna:
         specifics = AccessorySpecifics
-        category = Concept.Category.ACCESSORY
+        category = Subtype.Category.ACCESSORY
+        name_color = u'blue'
 
-    region = models.CharField(max_length=2, choices=Region.CHOICES) 
+    region = models.CharField(max_length=2, choices=Region.CHOICES, blank=True) 
     color = models.CharField(max_length=3, choices=Color.CHOICES) 
     compatible_platforms = models.ManyToManyField(Platform)
 
     wireless = models.BooleanField()
     force_feedback = models.BooleanField()
     rumble_feedback = models.BooleanField()
-
-

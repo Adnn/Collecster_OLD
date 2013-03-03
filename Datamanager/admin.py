@@ -2,6 +2,7 @@ from Datamanager.models import *
 from django.contrib import admin
 from django.db import models
 from django import forms
+from django.forms.formsets import formset_factory
 
 from Datamanager import settings
 
@@ -43,6 +44,19 @@ class InstancePictureInline(admin.StackedInline):
 class ConsoleSpecificsInline(admin.StackedInline):
     model = ConsoleSpecifics
 
+class GameSpecificsInline(admin.StackedInline):
+    model = GameSpecifics
+
+class AccessorySpecificsInline(admin.StackedInline):
+    model = AccessorySpecifics
+
+class BundleCompositionInline(admin.StackedInline):
+    model = BundleComposition
+    extra = 4
+
+class BuyingAdmin(admin.ModelAdmin):
+    inlines = [BundleCompositionInline,]
+
 #Solution to allow the duplication of 'empty' common_name values (unique otherwise)
 #from SO : http://stackoverflow.com/questions/454436/unique-fields-that-allow-nulls-in-django
 class ConceptForm(forms.ModelForm):
@@ -57,8 +71,6 @@ class ConceptForm(forms.ModelForm):
 class ConceptAdmin(admin.ModelAdmin):
     form = ConceptForm
 
-from django import forms
-from django.forms.formsets import formset_factory
 class TestForm(forms.Form):
     title = forms.CharField()
 
@@ -74,14 +86,27 @@ class InstanceAdmin(admin.ModelAdmin):
             #yield inline.get_formset(request, obj)
             yield InstanceAttributeInline(Instance, admin.site).get_formset(request, obj)
             """ 
+    DICT = {
+        AccessorySpecifics : AccessorySpecificsInline,
+        GameSpecifics : GameSpecificsInline,
+        ConsoleSpecifics : ConsoleSpecificsInline,
+    }
+
     def get_inline_instances(self, request):
+        self.inlines = [InstanceAttributeInline, InstanceCompositionInline, InstancePictureInline]
         InstanceAttributeInline.extra = 1 
-        self.inlines = [InstanceAttributeInline, InstanceCompositionInline, InstancePictureInline, ConsoleSpecificsInline]
+        wordlist = request.path.rsplit('/', 3)
+        if len(wordlist)==4 and (wordlist[1]=='instance') :
+            try:
+                instance_id = int(wordlist[2])
+                instance = Instance.objects.get(id=instance_id)
+                release = Release.objects.get_subclass(id=instance.instanciated_release.id)
+                Specifics = type(release).Dna.specifics
+                self.inlines.insert(0, self.DICT[Specifics])
+            except:
+                pass
+
         inline_instances = super(InstanceAdmin, self).get_inline_instances(request)
-        
-        for inline in inline_instances:
-            #inline.fields['value'].default = 5
-            pass
         return inline_instances
 
 admin.site.register(Concept, ConceptAdmin)
@@ -98,3 +123,8 @@ admin.site.register(Instance, InstanceAdmin)
 admin.site.register(Release, ReleaseAdmin)
 admin.site.register(GameSpecifics)
 admin.site.register(ConsoleSpecifics)
+
+admin.site.register(Buying, BuyingAdmin)
+admin.site.register(BuyingContext)
+admin.site.register(Location)
+admin.site.register(User)
