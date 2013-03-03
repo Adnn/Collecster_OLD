@@ -70,7 +70,7 @@ def save_all(instance, form, formsets):
 def add_instance(request, release_id):
     #instanciated_release = Release.objects.get(id=release_id)
     instanciated_release = Release.objects.get_subclass(id=release_id)
-    DerivedInstance = type(instanciated_release)
+    DerivedRelease = type(instanciated_release)
 
     initial_attributes = []
     attributes_count = 0
@@ -108,7 +108,7 @@ def add_instance(request, release_id):
     #The pythonic insane EAFP ... (http://stackoverflow.com/questions/610883/how-to-know-if-an-object-has-an-attribute-in-python)
     #We check if the DerivedRelease class has a specifics, and show an inline formset if it's the case
     try:
-        InstanceSpecificsFormset = inlineformset_factory(Instance, DerivedInstance.Dna.specifics, form=SpecificsModelForm, can_delete=False, extra=1, max_num=1)
+        InstanceSpecificsFormset = inlineformset_factory(Instance, DerivedRelease.Dna.specifics, form=SpecificsModelForm, can_delete=False, extra=1, max_num=1)
         formset_factories.append(InstanceSpecificsFormset)
     except AttributeError:
         pass
@@ -208,5 +208,5 @@ def print_instance(request, instance_id):
     tag_url = os.path.join(conf.settings.MEDIA_URL, name_tag(instance)).replace('\\', '/')
     return render(request, 'view_tag.html', {
         'tag_url' : tag_url,
-        'form_action' : '/admin/Datamanager/'
+        'form_action' : '/' + settings.URL_TAG_REDIRECT
     })
