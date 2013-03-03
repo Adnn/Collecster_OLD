@@ -4,6 +4,8 @@ from django.db import models
 from django import forms
 from django.forms.models import modelformset_factory, inlineformset_factory
 
+from OOExample import admin2 
+
 import traceback
 import sys
 
@@ -73,4 +75,5 @@ class InstanceAdmin(admin.ModelAdmin):
 
 admin.site.register(Attribute)
 admin.site.register(Release)
-admin.site.register(Instance, InstanceAdmin)
+#admin.site.register(Instance, InstanceAdmin)
+admin.site.register(Instance, admin2.CustomAdmin)
