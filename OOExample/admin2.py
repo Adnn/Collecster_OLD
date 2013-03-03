@@ -4,6 +4,7 @@ from django.db import models
 from django import forms
 from django.forms.models import modelformset_factory, inlineformset_factory, BaseInlineFormSet
 
+# \todo : explore this idea of subclassing the queryset instead of breaking Inline.queryset() interface
 class AugmentedQuerySet(models.query.QuerySet):
     forwarded_id = 0
 
