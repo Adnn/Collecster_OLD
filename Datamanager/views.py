@@ -73,6 +73,27 @@ class SpecificsModelForm(forms.ModelForm):
         return True
 
          
+class InstancePictureModelForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(InstancePictureModelForm, self).__init__(*args, **kwargs)
+        self.fields['attribute'].queryset = Release.objects.get(id=InstanceForm.release_id).attribute.all()
+
+    def clean(self):
+        cleaned_data = super(InstancePictureModelForm, self).clean()
+        attribute = cleaned_data.get('attribute')
+        detail = cleaned_data.get('detail')
+
+        if (attribute==None) and (detail!=PictureDetail.GROUP):
+            raise forms.ValidationError(
+                "Attribute value is mandatory when detail is not '" +
+                PictureDetail.DICT[PictureDetail.GROUP][0] + "'.")
+        elif (attribute!=None) and (detail==PictureDetail.GROUP):
+            raise forms.ValidationError(
+                "Attribute value is forbidden when detail is '" +
+                PictureDetail.DICT[PictureDetail.GROUP][0] + "'.")
+
+        return cleaned_data
+        
 def save_all(instance, form, formsets):
     #Since we used 'commit=False' on form saving, we need to save the instance by hand, and also its many-2-many relationships
     instance.save()
@@ -119,7 +140,7 @@ def add_instance(request, release_id):
     InstanceCompositionModelForm.composing_releases_ids = composing_releases_id
     InstanceCompositionFormset = inlineformset_factory(Instance, InstanceComposition, form=InstanceCompositionModelForm, fk_name='container_instance',  can_delete=False, extra=composition_count)
 
-    InstancePictureFormset = inlineformset_factory(Instance, InstancePicture, can_delete=False, extra=3)
+    InstancePictureFormset = inlineformset_factory(Instance, InstancePicture, form=InstancePictureModelForm, can_delete=False, extra=6)
     #The pythonic insane EAFP ... (http://stackoverflow.com/questions/610883/how-to-know-if-an-object-has-an-attribute-in-python)
     #We check if the DerivedRelease class has a specifics, and show an inline formset if it's the case
     try:

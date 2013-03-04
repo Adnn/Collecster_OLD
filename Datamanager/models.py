@@ -377,12 +377,32 @@ class Instance(InstanceParent):
 
         return instance_image 
 
-class PictureCategory(models.Model): name = models.CharField(max_length=60, unique=True)
+class PictureDetail():
+    GROUP = u'GRP'
+    FRONT = u'FRT'
+    BACK = u'BCK'
+    SIDE = u'SID'
+    SIDE_LABEL = u'SLB'
+    INSIDE = u'INS'
+
+    DICT = {
+        GROUP : (u'Group',),
+        FRONT : (u'Front',),
+        BACK : (u'Back',),
+        SIDE : (u'Side',),
+        SIDE_LABEL : (u'Side label',),
+        INSIDE : (u'Inside',),
+    }
+
+    @classmethod
+    def get_choices(cls):
+        return [(key, value[0]) for key, value in cls.DICT.items()]
 
 class InstancePicture(models.Model):
     instance = models.ForeignKey(Instance)
     image = models.ImageField(upload_to=name_picture)
-    category = models.ForeignKey(PictureCategory, blank=True, null=True)
+    attribute = models.ForeignKey(Attribute, blank=True, null=True)
+    detail = models.CharField(max_length=3, choices=PictureDetail.get_choices(), blank=False, default=PictureDetail.GROUP)
 
 class InstanceAttribute(models.Model):
     instance = models.ForeignKey(Instance)
@@ -449,6 +469,7 @@ class BuyingContext(models.Model):
 
 class Buying(Bundle):
     price = models.FloatField()
+    shipping_cost = models.FloatField(blank=True, null=True)
     location = models.ForeignKey(Location)
     context = models.ForeignKey(BuyingContext)
 
