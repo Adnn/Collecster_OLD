@@ -45,6 +45,12 @@ class InstanceAttributeModelForm(forms.ModelForm):
         if InstanceAttributeModelForm.init:
             self.initial = attribute
         self.fields['attribute'].queryset = Attribute.objects.filter(id=attribute['attribute'].id)
+        self.fields['attribute'].empty_label = None
+        
+        WidgetClass, options = AttributeType.get_class_and_options(attribute['attribute'].tipe)
+        if options==None:
+            options = {}
+        self.fields['value'].widget = WidgetClass(**options)
         InstanceAttributeModelForm.form_id += 1
 
 

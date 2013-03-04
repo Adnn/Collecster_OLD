@@ -1,5 +1,6 @@
 from django.db import models
 from model_utils.managers import InheritanceManager
+from django.forms import widgets
 
 import qrcode
 from PIL import Image, ImageDraw
@@ -210,6 +211,37 @@ class InstanceParent(models.Model):
         return parent_image
 
 #Generic models
+class AttributeType:
+    RATING = u'RTG'
+    RATING_NULL = u'RTN'
+    PRESENCE  = u'PRS'
+
+    RATING_CHOICES = (
+        (u'M', u'Mint'),
+        (u'A', u'A'),
+        (u'B', u'B'),
+        (u'C', u'C'),
+        (u'D', u'D'),
+        (u'E', u'E'),
+    )
+
+    RATING_NULL_CHOICES = ((u'', u'---'),) + RATING_CHOICES
+
+    DICT = {
+        RATING : (u'Rating', (widgets.Select, {'choices':RATING_CHOICES,}) ),
+        RATING_NULL : (u'Rating w/ null', (widgets.Select, {'choices':RATING_NULL_CHOICES,}) ),
+        PRESENCE : (u'Presence', (widgets.CheckboxInput, None) ),
+    }
+    
+    @classmethod
+    def get_choices(cls):
+        return [(key, value[0]) for key, value in cls.DICT.items()]
+
+    @classmethod
+    def get_class_and_options(cls, attribute_type):
+        value = cls.DICT[attribute_type][1]
+        return value[0], value[1]
+
 class AttributeCategory(models.Model):
     name = models.CharField(max_length=60, unique=True)
 
@@ -219,6 +251,7 @@ class AttributeCategory(models.Model):
 class Attribute(models.Model):
     category = models.ForeignKey(AttributeCategory)
     name = models.CharField(max_length=60)
+    tipe = models.CharField(max_length=3, choices=AttributeType.get_choices())
 
     def __unicode__(self):
         return u'['+self.category.name+'] '+self.name
@@ -353,7 +386,7 @@ class InstancePicture(models.Model):
 class InstanceAttribute(models.Model):
     instance = models.ForeignKey(Instance)
     attribute = models.ForeignKey(Attribute)
-    value = models.CharField(max_length=60)
+    value = models.CharField(max_length=60, blank=True)
 
 class InstanceComposition(models.Model):
     container_instance = models.ForeignKey(Instance, related_name="container_instance")
@@ -403,7 +436,6 @@ class Country:
 class Location(models.Model):
     country = models.CharField(max_length=2, choices=Country.CHOICES)
     city = models.CharField(max_length=60, unique=True)
-    complement = models.CharField(max_length=60, blank=True)
 
     def __unicode__(self):
         return '['+self.country+'] ' + self.city
