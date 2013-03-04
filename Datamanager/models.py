@@ -24,11 +24,17 @@ def name_tag(instance, filename=None):
     )
 
 
-def generate_qr(id):
+def generate_qr(id, object_typename=None):
     qr = qrcode.QRCode(
         box_size = settings.TAG_QR_BOXSIZE,
     )
-    qr.add_data(str(id))
+
+    qrdata = ''
+    if(object_typename):
+        qrdata += object_typename + '/'
+    qrdata += str(id)
+    qr.add_data(qrdata)
+
     return qr.make_image()._img
 
 def get_textsize(text):
@@ -291,7 +297,7 @@ class Instance(InstanceParent):
         release_subclass = Release.objects.get_subclass(id=self.instanciated_release.id)
         ReleaseSpecifics = type(release_subclass).Dna.specifics
         #generate the qrcode base on Instance.id (i.e. per instance data)
-        qr_image = generate_qr(self.id) 
+        qr_image = generate_qr(self.id, type(self).__name__.lower()) 
         
         #get the release identification information (with optional subclass information)
         #(i.e. per release data)
@@ -317,18 +323,27 @@ class Instance(InstanceParent):
         except AttributeError: #in case the custom InstanceParent does not define get_parent_tag()
             specifics_image = Image.new('RGB', (0, 0), 'white')
 
-        spacing = 10
+        idtext = str(self.id).rjust(settings.TAG_IDPADDING)
+        idtext_size = get_textsize(idtext) 
+
+        spacing = settings.TAG_INSTANCEDATA_SPACING 
         size = (
-            specifics_image.size[0] + parent_image.size[0] + spacing,
-            max(specifics_image.size[1], parent_image.size[1])
+            specifics_image.size[0] + parent_image.size[0] + spacing + idtext_size[0] + spacing,
+            max(specifics_image.size[1], parent_image.size[1], idtext_size[1])
         )        
         instance_image = Image.new('RGB', size, 'white')
+        draw = ImageDraw.Draw(instance_image)
         instance_image.paste(parent_image, (0, 0))
         instance_image.paste(specifics_image, (parent_image.size[0]+spacing, 0))
+        draw.text(
+                (specifics_image.size[0] + spacing + parent_image.size[0] + spacing,
+                (max(idtext_size[1], settings.TAG_INSTANCEDETAIL_HEIGHT)-idtext_size[1])/2),
+            idtext,
+            fill='black')
+
         return instance_image 
 
-class PictureCategory(models.Model):
-    name = models.CharField(max_length=60, unique=True)
+class PictureCategory(models.Model): name = models.CharField(max_length=60, unique=True)
 
 class InstancePicture(models.Model):
     instance = models.ForeignKey(Instance)
@@ -388,6 +403,7 @@ class Country:
 class Location(models.Model):
     country = models.CharField(max_length=2, choices=Country.CHOICES)
     city = models.CharField(max_length=60, unique=True)
+    complement = models.CharField(max_length=60, blank=True)
 
     def __unicode__(self):
         return '['+self.country+'] ' + self.city
@@ -481,7 +497,7 @@ class WorkingSpecifics(AbstractSpecifics):
     working = models.CharField(max_length=1, choices=WorkingState.CHOICES, default=WorkingState.UNKNOWN)
 
     def get_tag(self):
-        work = 'work'
+        work = settings.STR_WORK
 
         text_size = get_textsize(work)
 
