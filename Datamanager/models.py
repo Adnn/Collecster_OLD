@@ -258,9 +258,9 @@ class Attribute(models.Model):
 
 class Release(models.Model):
     realised_concept = models.ForeignKey(Concept)
+    date = models.DateField(blank=True, null=True)
     specificity = models.CharField(max_length=60, blank=True)
     attribute = models.ManyToManyField(Attribute, blank=True)
-    date = models.DateField()
     
     objects = InheritanceManager()
 
@@ -564,6 +564,7 @@ class Console(Release):
         category = Subtype.Category.CONSOLE
         name_color = u'red'
 
+    loose = models.BooleanField()
     region = models.CharField(max_length=2, choices=Region.CHOICES) 
     color = models.CharField(max_length=3, choices=Color.CHOICES) 
     implemented_platforms = models.ManyToManyField(Platform)
@@ -586,6 +587,7 @@ class Game(Release):
         category = Subtype.Category.GAME 
         name_color = u'green'
 
+    loose = models.BooleanField()
     region = models.CharField(max_length=2, choices=Region.CHOICES) 
     platform = models.ForeignKey(Platform)
     publisher = models.ForeignKey(Company, blank=True, null=True)
@@ -599,6 +601,7 @@ class Accessory(Release):
         category = Subtype.Category.ACCESSORY
         name_color = u'blue'
 
+    loose = models.BooleanField()
     region = models.CharField(max_length=2, choices=Region.CHOICES, blank=True) 
     color = models.CharField(max_length=3, choices=Color.CHOICES) 
     compatible_platforms = models.ManyToManyField(Platform)
