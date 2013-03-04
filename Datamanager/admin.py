@@ -7,18 +7,22 @@ from django.forms.formsets import formset_factory
 from Datamanager import settings
 
 #Define an InlineAdminModel on ReleaseCompostion in order to add compositions directly on 'add Release' pages
-class CompositionInline(admin.StackedInline):
+class ReleaseCompositionInline(admin.StackedInline):
     model = ReleaseComposition
     extra = 1
 #Since a ReleaseComposition has 2 foreign keys on Release, we specify which Field name olds the key to the currently edited Release. So we set it to the container release.
-    fk_name =  "container_release"
+    fk_name =  'container_release'
 
 #Create a common admin ancestor for all derived Releases models to inherit.
 class ReleaseAdmin(admin.ModelAdmin): 
     list_display = ('id', str, 'instanciate_link')
+    #raw_id_fields = ("realised_concept",)
     inlines = [
-        CompositionInline,
+        ReleaseCompositionInline,
     ] 
+    filter_horizontal = [
+        'attribute',
+    ]
 
     def instanciate_link(self, obj):
         url = '/' + settings.URL_DM + settings.URL_ADD_INSTANCE+str(obj.id) + '/'
@@ -27,16 +31,22 @@ class ReleaseAdmin(admin.ModelAdmin):
     instanciate_link.short_description = 'Add instance'
 
 class ConsoleAdmin(ReleaseAdmin):
-    raw_id_fields = ("realised_concept",)
-    list_display = ("__unicode__", "id",)
+    pass
 
+class GameAdmin(ReleaseAdmin):
+    pass
+
+class AccessoryAdmin(ReleaseAdmin):
+    pass
 
 class InstanceAttributeInline(admin.StackedInline):
     model = InstanceAttribute      
+    extra = 0 
 
 class InstanceCompositionInline(admin.StackedInline):
     model = InstanceComposition
     fk_name = 'container_instance'
+    extra = 0
 
 class InstancePictureInline(admin.StackedInline):
     model = InstancePicture
@@ -71,9 +81,6 @@ class ConceptForm(forms.ModelForm):
 class ConceptAdmin(admin.ModelAdmin):
     form = ConceptForm
 
-class TestForm(forms.Form):
-    title = forms.CharField()
-
 class InstanceAdmin(admin.ModelAdmin):
     """def get_form(self, request, obj=None, **kwargs):
         self.inlines += [ InstanceAttributeInline,]
@@ -94,7 +101,6 @@ class InstanceAdmin(admin.ModelAdmin):
 
     def get_inline_instances(self, request):
         self.inlines = [InstanceAttributeInline, InstanceCompositionInline, InstancePictureInline]
-        InstanceAttributeInline.extra = 1 
         wordlist = request.path.rsplit('/', 3)
         if len(wordlist)==4 and (wordlist[1]=='instance') :
             try:
@@ -111,8 +117,8 @@ class InstanceAdmin(admin.ModelAdmin):
 
 admin.site.register(Concept, ConceptAdmin)
 admin.site.register(Console, ConsoleAdmin)
-admin.site.register(Game)
-admin.site.register(Accessory)
+admin.site.register(Game, GameAdmin)
+admin.site.register(Accessory, AccessoryAdmin)
 admin.site.register(Platform)
 admin.site.register(Attribute)
 admin.site.register(AttributeCategory)

@@ -258,6 +258,7 @@ class Attribute(models.Model):
 
 class Release(models.Model):
     realised_concept = models.ForeignKey(Concept)
+    name = models.CharField(max_length=60, blank=True)
     date = models.DateField(blank=True, null=True)
     specificity = models.CharField(max_length=60, blank=True)
     attribute = models.ManyToManyField(Attribute, blank=True)
