@@ -4,6 +4,7 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render, render_to_response
 from django.forms.models import modelformset_factory, inlineformset_factory
 from django.core.files.base import ContentFile 
+from django.forms import widgets
 
 from django import conf
 from Datamanager.models import *
@@ -18,12 +19,20 @@ class InstanceForm(forms.ModelForm):
         model = Instance
         #used to hide the tag 'image upload' widget, since the tag will be auto generated in the print view
         exclude = ('tag',)
+        #fields = ('instanciated_release', )
 
     def __init__(self, *args, **kwargs):
         super(InstanceForm, self).__init__(*args, **kwargs)
         release_id = InstanceForm.release_id
         self.initial = {'instanciated_release' : release_id,}
         self.fields['instanciated_release'].queryset = Release.objects.filter(id=release_id)
+        #This way the empty '-----' choice does not appear
+        self.fields['instanciated_release'].empty_label = None
+        
+        #Set instanciated_release field in first position on the form
+        # without using 'Class.fields' that forces to list all the fields...
+        release = self.fields.pop('instanciated_release')
+        self.fields.insert(0, 'instanciated_release', release)
 
 class InstanceAttributeModelForm(forms.ModelForm):
     init = False
