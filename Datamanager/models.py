@@ -3,13 +3,18 @@ from model_utils.managers import InheritanceManager
 from django.forms import widgets
 
 import qrcode
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 
 import os
 
 from Datamanager import stringer
 from Datamanager import settings
 
+
+#Global fonts
+font_title = ImageFont.truetype(settings.TAG_FONT_TITLE, settings.TAG_FONT_TITLESIZE)
+font_detail = ImageFont.truetype(settings.TAG_FONT_DETAIL, settings.TAG_FONT_DETAILSIZE)
+font_checksign = ImageFont.truetype(settings.TAG_FONT_CHECKSIGN, settings.TAG_FONT_CHECKSIGNSIZE)
 
 def get_instance_mediapath(instance):
     return os.path.join(settings.PATH_MEDIA_INSTANCES, str(instance.id))
@@ -38,10 +43,11 @@ def generate_qr(id, object_typename=None):
 
     return qr.make_image()._img
 
-def get_textsize(text):
-        dum_img = Image.new('RGB', (1, 1), 'white')
-        dum_draw = ImageDraw.Draw(dum_img)
-        return dum_draw.textsize(text)
+def get_textsize(text, font):
+    return font.getsize(text)
+
+def get_titlesize(text):
+    return get_textsize(text, font_title)
 
 # \todo : implement a nice layout system instead of hardcoded positions (like flows in html  ; )
 """ Organize the final aspect of the printed tag (in a rather rigid way).
@@ -59,7 +65,7 @@ def organize_tag(release_img, instance_img, qr_img, border=True):
     left_width = max(
         release_img.size[0],
         instance_img.size[0],
-        settings.TAG_MIN_COLS*get_textsize('_')[0]
+        settings.TAG_MIN_COLS*get_textsize('_', font_title)[0]
     )
     width = 2*border_size + qr_img.size[0] + left_width
     height = 2*border_size + max(qr_img.size[1], (release_img.size[1]+instance_img.size[1]))
@@ -204,10 +210,20 @@ class InstanceParent(models.Model):
     notes = models.CharField(max_length=180, blank=True)
 
     def get_parent_tag(self):
-        parent_image = Image.new('RGB', (20, settings.TAG_INSTANCEDETAIL_HEIGHT), 'white')
-        draw = ImageDraw.Draw(parent_image)
+        side = settings.TAG_INSTANCEDETAIL_HEIGHT
+        diameter = side/2
+        padding = (side-diameter)/2
 
-        draw.ellipse([5, 5, 15, 15], fill=Origin.ORIGIN_DICT[self.origin][1])
+        ellipse_bbox = [padding, padding, padding+diameter, padding+diameter]
+        fill_color = Origin.ORIGIN_DICT[self.origin][1]
+        sample_factor = settings.TAG_SUPERSAMPLE_FACTOR
+
+        supersize = sample_factor * side
+        supersampled = Image.new('RGB', (supersize, supersize), 'white')
+        superdraw = ImageDraw.Draw(supersampled)
+        superdraw.ellipse(map((lambda x: x*sample_factor), ellipse_bbox), fill=fill_color)
+
+        parent_image = supersampled.resize((side, side), Image.ANTIALIAS)
         return parent_image
 
 #Generic models
@@ -279,25 +295,25 @@ class Release(models.Model):
 
         def add(x, y):
             return x+y
-        name_width = reduce(max, [width for width, height in map(get_textsize, name_lines)])
-        name_height = reduce(add, [height for width, height in map(get_textsize, name_lines)])
+        name_width = reduce(max, [width for width, height in map(get_titlesize, name_lines)])
+        name_height = reduce(add, [height for width, height in map(get_titlesize, name_lines)])
         complement = self.get_tag_complement()
         if complement:
-            complement_size = get_textsize(complement)
+            complement_size = get_textsize(complement, font_detail)
         else:
             complement_size = (0, 0)
 
-        left_pad = 2
+        left_pad = settings.TAG_TEXT_BORDER_PAD
         release_img = Image.new('RGB', (max(name_width, complement_size[0])+left_pad, name_height+complement_size[1]), 'white')
         release_draw = ImageDraw.Draw(release_img)
 
         offset = 0
         for name_part in name_lines:
-            release_draw.text((left_pad, offset), name_part, fill=name_color)
-            offset += release_draw.textsize(name_part)[1]
+            release_draw.text((left_pad, offset), name_part, font=font_title, fill=name_color)
+            offset += release_draw.textsize(name_part, font=font_title)[1]
 
         if complement:
-            release_draw.text((left_pad, offset), complement, fill='black')
+            release_draw.text((left_pad, offset), complement, font=font_title, fill='black')
 
         return release_img
 
@@ -357,8 +373,8 @@ class Instance(InstanceParent):
         except AttributeError: #in case the custom InstanceParent does not define get_parent_tag()
             specifics_image = Image.new('RGB', (0, 0), 'white')
 
-        idtext = str(self.id).rjust(settings.TAG_IDPADDING)
-        idtext_size = get_textsize(idtext) 
+        idtext = str(self.id).rjust(settings.TAG_ID_LEFTPADDING_CHARS)
+        idtext_size = get_textsize(idtext, font_detail) 
 
         spacing = settings.TAG_INSTANCEDATA_SPACING 
         size = (
@@ -373,7 +389,8 @@ class Instance(InstanceParent):
                 (specifics_image.size[0] + spacing + parent_image.size[0] + spacing,
                 (max(idtext_size[1], settings.TAG_INSTANCEDETAIL_HEIGHT)-idtext_size[1])/2),
             idtext,
-            fill='black')
+            font = font_detail,
+            fill='black',)
 
         return instance_image 
 
@@ -553,25 +570,28 @@ class WorkingSpecifics(AbstractSpecifics):
     def get_tag(self):
         work = settings.STR_WORK
 
-        text_size = get_textsize(work)
+        text_size = get_textsize(work, font_detail)
 
-        side = 10
-        spacing = 3 
+        side = settings.TAG_CHECKBOX_SIDE
+        spacing = settings.TAG_TEXT_BORDER_PAD 
         height = max(text_size[1], settings.TAG_INSTANCEDETAIL_HEIGHT)
         workingbox_img = Image.new('RGB', (text_size[0]+side+spacing, height), 'white')
         draw = ImageDraw.Draw(workingbox_img)
 
-        draw.text([0, (height-text_size[1])/2], work, fill='black')
+        draw.text([0, (height-text_size[1])/2], work, font=font_detail, fill='black')
         up_left = (text_size[0]+spacing, (height-side)/2)
         #draw.rectangle documentation is too laconic, we are missing the right edge of the square if we do not substract 1 from its side because it seems that we are defining the two points on the outline
         down_right = (up_left[0] + side-1, up_left[1] + side-1) 
         draw.rectangle([up_left, down_right], outline='black')
 
-        check_pos = (up_left[0]+2, up_left[1])
+        check_pos = (
+            up_left[0]+settings.TAG_CHECKSIGN_PAD[0],
+            up_left[1] + settings.TAG_CHECKSIGN_PAD[1])
+
         if (self.working==WorkingState.YES):
-            draw.text(check_pos, 'V', fill='green')
+            draw.text(check_pos, 'V', font=font_checksign, fill='green')
         elif (self.working==WorkingState.NO):
-            draw.text(check_pos, 'X', fill='red')
+            draw.text(check_pos, 'X', font=font_checksign, fill='red')
 
         return workingbox_img
         
