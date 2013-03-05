@@ -265,6 +265,8 @@ class AttributeCategory(models.Model):
         return self.name
 
 class Attribute(models.Model):
+    class Meta:
+        ordering = ('category', 'name')
     category = models.ForeignKey(AttributeCategory)
     name = models.CharField(max_length=60)
     tipe = models.CharField(max_length=3, choices=AttributeType.get_choices())
@@ -276,7 +278,7 @@ class Release(models.Model):
     realised_concept = models.ForeignKey(Concept)
     name = models.CharField(max_length=60, blank=True)
     date = models.DateField(blank=True, null=True)
-    specificity = models.CharField(max_length=60, blank=True)
+    specificity_text = models.CharField(max_length=60, blank=True)
     attribute = models.ManyToManyField(Attribute, blank=True)
     
     objects = InheritanceManager()
@@ -326,7 +328,18 @@ class ReleaseComposition(models.Model):
     container_release = models.ForeignKey(Release, related_name="container_release")
     element_release = models.ForeignKey(Release)
 
-class User(models.Model):
+class Specificity(models.Model):
+    name = models.CharField(max_length=60, blank=True)
+
+    def __unicode__(self):
+        return self.name
+     
+class SpecificityComposition(models.Model):
+    specificity = models.ForeignKey(Specificity)
+    release = models.ForeignKey(Release)
+    value = models.CharField(max_length=60)
+    
+class Person(models.Model):
     name = models.CharField(max_length=60)
 
     def __unicode__(self):
@@ -336,7 +349,7 @@ class Instance(InstanceParent):
     instanciated_release = models.ForeignKey(Release)
     tag = models.ImageField(upload_to=name_tag, blank=True)
 
-    owner = models.ForeignKey(User)
+    owner = models.ForeignKey(Person)
     add_date = models.DateTimeField(auto_now_add=True)
     lastmodif_date = models.DateTimeField(auto_now=True)
 
@@ -517,7 +530,7 @@ class Buying(Bundle):
         return str(self.acquisition_date) + ' ' + str(self.context)
 
 class Donation(Bundle):
-    donator = models.ForeignKey(User)
+    donator = models.ForeignKey(Person)
 
 class BundleComposition(models.Model):
     bundle = models.ForeignKey(Bundle)

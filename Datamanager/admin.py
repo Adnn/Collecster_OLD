@@ -13,11 +13,16 @@ class ReleaseCompositionInline(admin.StackedInline):
 #Since a ReleaseComposition has 2 foreign keys on Release, we specify which Field name olds the key to the currently edited Release. So we set it to the container release.
     fk_name =  'container_release'
 
+class SpecificityCompositionInline(admin.TabularInline):
+    model = SpecificityComposition
+    extra = 2
+
 #Create a common admin ancestor for all derived Releases models to inherit.
 class ReleaseAdmin(admin.ModelAdmin): 
     list_display = ('id', str, 'instanciate_link')
     #raw_id_fields = ("realised_concept",)
     inlines = [
+        SpecificityCompositionInline,
         ReleaseCompositionInline,
     ] 
     filter_horizontal = [
@@ -131,4 +136,5 @@ admin.site.register(Release, ReleaseAdmin)
 admin.site.register(Buying, BuyingAdmin)
 admin.site.register(BuyingContext)
 admin.site.register(Location)
-admin.site.register(User)
+admin.site.register(Person)
+admin.site.register(Specificity)
