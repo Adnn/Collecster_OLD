@@ -473,21 +473,44 @@ class Country:
         
 class Location(models.Model):
     country = models.CharField(max_length=2, choices=Country.CHOICES)
-    city = models.CharField(max_length=60, unique=True)
+    city = models.CharField(max_length=60, unique=True, blank=True)
 
     def __unicode__(self):
         return '['+self.country+'] ' + self.city
 
+class BuyingContextCategory:
+    INTERNET = u'NET'
+    SHOP = u'SHP'
+    SECONDHAND = u'SEC' 
+    
+    DICT = {
+        INTERNET : (u'Internet',),
+        SHOP : (u'Shop',),
+        SECONDHAND : (u'Secondhand trade',),
+    }
+
+    @classmethod
+    def get_choices(cls):
+        return [(key, value[0]) for key, value in cls.DICT.items()]
+
 class BuyingContext(models.Model):
-    name = models.CharField(max_length=60, unique=True)
+    category = models.CharField(max_length=3, choices=BuyingContextCategory.get_choices())
+    name = models.CharField(max_length=60)
+    location = models.ForeignKey(Location, blank=True, null=True)
+    complement = models.CharField(max_length=60, blank=True)
 
     def __unicode__(self):
-        return self.name
+        value = self.name
+        if self.complement:
+            value += ' ' + complement
+        if self.location:
+            value += ', ' + str(self.location)
+        return value
 
 class Buying(Bundle):
     price = models.FloatField()
     shipping_cost = models.FloatField(blank=True, null=True)
-    location = models.ForeignKey(Location)
+    location = models.ForeignKey(Location, blank=True, null=True)
     context = models.ForeignKey(BuyingContext)
 
     def __unicode__(self):

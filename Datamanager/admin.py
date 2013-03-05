@@ -127,8 +127,6 @@ admin.site.register(Company)
 #to del
 admin.site.register(Instance, InstanceAdmin)
 admin.site.register(Release, ReleaseAdmin)
-admin.site.register(GameSpecifics)
-admin.site.register(ConsoleSpecifics)
 
 admin.site.register(Buying, BuyingAdmin)
 admin.site.register(BuyingContext)
