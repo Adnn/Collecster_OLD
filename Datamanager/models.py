@@ -448,7 +448,7 @@ class Instance(InstanceParent):
     lastmodif_date = models.DateTimeField(auto_now=True)
 
     def __unicode__(self):
-        return str(self.id)+' '+str(self.instanciated_release)
+        return str(self.id)+' '+unicode(self.instanciated_release)
 
     def generate_tag(self):
         border = True
@@ -615,7 +615,7 @@ class BuyingContext(models.Model):
     def __unicode__(self):
         value = self.name
         if self.complement:
-            value += ' ' + complement
+            value += ', ' + self.complement
         if self.location:
             value += ', ' + str(self.location)
         return value
@@ -700,7 +700,13 @@ class WorkingState:
     )
 
 class Platform(models.Model):
-    name = models.CharField(max_length=20, unique=True)
+    brand = models.ForeignKey(Company)
+    generation = models.PositiveIntegerField(blank=True, null=True)
+    arcade = models.BooleanField(default=False)
+    name = models.CharField(max_length=30, unique=True)
+    abbreviated = models.CharField(max_length=8, unique=True, blank=True, null=True)
+
+    canonical_platform = models.ForeignKey('self', blank=True, null=True)
 
     def __unicode__(self):
         return self.name
@@ -802,7 +808,7 @@ class Game(Release):
     publisher = models.ForeignKey(Company, blank=True, null=True)
 
     def get_tag_complement(self):
-        complement = '[%s] %s' % (self.region, self.platform.name)
+        complement = '[%s] %s' % (self.region, self.platform.abbreviated or self.platform.name)
         if self.loose:
             complement += ' '+settings.STR_LOOSE
         return complement

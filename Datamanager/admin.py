@@ -95,6 +95,18 @@ class ConceptForm(forms.ModelForm):
 class ConceptAdmin(admin.ModelAdmin):
     form = ConceptForm
 
+class PlatformForm(forms.ModelForm):
+    class Meta:
+        model = Platform
+    def clean_abbreviated(self):
+        abbreviated = self.cleaned_data['abbreviated']
+        if abbreviated == '':
+            abbreviated = None
+        return abbreviated 
+
+class PlatformAdmin(admin.ModelAdmin):
+    form = PlatformForm
+
 class InstanceAdmin(admin.ModelAdmin):
     """def get_form(self, request, obj=None, **kwargs):
         self.inlines += [ InstanceAttributeInline,]
@@ -134,7 +146,7 @@ admin.site.register(ComboPack, ComboPackAdmin)
 admin.site.register(Console, ConsoleAdmin)
 admin.site.register(Game, GameAdmin)
 admin.site.register(Accessory, AccessoryAdmin)
-admin.site.register(Platform)
+admin.site.register(Platform, PlatformAdmin)
 admin.site.register(Attribute)
 admin.site.register(AttributeCategory)
 admin.site.register(Company)
