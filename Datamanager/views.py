@@ -117,7 +117,7 @@ def add_instance(request, release_id):
 
     composing_releases_id = []
     composition_count = 0
-    for nested_release in ReleaseComposition.objects.filter(container_release=instanciated_release):
+    for nested_release in ReleaseComposition.objects.filter(container_release=instanciated_release).filter(element_release__immaterial=False):
         # .id is not necessary for functionnality, but does it change the value stored in the list ?
         # yes it does : it appends the element release itslef instead of its id
         composing_releases_id.append(nested_release.element_release.id)

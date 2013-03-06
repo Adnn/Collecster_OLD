@@ -20,6 +20,8 @@ class SpecificityCompositionInline(admin.TabularInline):
 #Create a common admin ancestor for all derived Releases models to inherit.
 class ReleaseAdmin(admin.ModelAdmin): 
     list_display = ('id', str, 'instanciate_link')
+    #since only games can be immaterial, the default is to hide the choice (default being False)
+    exclude = ('immaterial',)
     #raw_id_fields = ("realised_concept",)
     inlines = [
         SpecificityCompositionInline,
@@ -30,8 +32,12 @@ class ReleaseAdmin(admin.ModelAdmin):
     ]
 
     def instanciate_link(self, obj):
-        url = '/' + settings.URL_DM + settings.URL_ADD_INSTANCE+str(obj.id) + '/'
-        return '<a href="' + url + '">instanciate</a>' 
+        if obj.immaterial==False:
+            url = '/' + settings.URL_DM + settings.URL_ADD_INSTANCE+str(obj.id) + '/'
+            return '<a href="' + url + '">instanciate</a>' 
+        else:
+            return 'immaterial'
+
     instanciate_link.allow_tags = True
     instanciate_link.short_description = 'Add instance'
 
@@ -42,7 +48,7 @@ class ConsoleAdmin(ReleaseAdmin):
     pass
 
 class GameAdmin(ReleaseAdmin):
-    pass
+    exclude = ()
 
 class AccessoryAdmin(ReleaseAdmin):
     pass

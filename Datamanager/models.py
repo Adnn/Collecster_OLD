@@ -332,10 +332,17 @@ class Release(models.Model):
     specificity_text = models.CharField(max_length=60, blank=True)
     attribute = models.ManyToManyField(Attribute, blank=True)
     
+    immaterial = models.BooleanField(default=False)
+    
     objects = InheritanceManager()
 
     def __unicode__(self):
-        return self.realised_concept.common_name
+        text = self.realised_concept.common_name
+        if (self.name):
+            text += '::'+self.name
+        if self.immaterial:
+            text = '[!] ' + text
+        return text
 
     def get_display_name(self):
         return self.realised_concept.common_name
