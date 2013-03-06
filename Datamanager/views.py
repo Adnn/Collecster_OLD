@@ -1,4 +1,5 @@
 import StringIO
+import glob
 
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render, render_to_response
@@ -228,12 +229,23 @@ def print_instance(request, instance_id):
         conf.settings.MEDIA_ROOT, 
         name_tag(instance),
     )
+    
+    tagdir = os.path.join(
+        conf.settings.MEDIA_ROOT, 
+        get_tagdir(instance),
+    )
 
-    #Delete the tag image if it already exists (django default behavior being to rename the file if there is a collision)
-    try:
-        os.remove(name)
-    except:
-        pass
+    for previoustag in glob.glob(os.path.join(tagdir, 'tag*')):
+        #some basic concurrency protection
+        try:    
+            os.remove(previoustag)
+        except:
+            pass
+    #Delete the tag image if it already exists (django default behavior being to rename the file if there is a collision) : does not apply anymore
+    #try:
+    #    os.remove(name)
+    #except:
+    #    pass
 
     instance.tag.save(name, tag_file)
     #no clue if we have to close it by hand, better safe...

@@ -12,9 +12,7 @@ from Datamanager import settings
 
 
 #Global fonts
-font_title = ImageFont.truetype(settings.TAG_FONT_TITLE, settings.TAG_FONT_TITLESIZE)
-font_detail = ImageFont.truetype(settings.TAG_FONT_DETAIL, settings.TAG_FONT_DETAILSIZE)
-font_checksign = ImageFont.truetype(settings.TAG_FONT_CHECKSIGN, settings.TAG_FONT_CHECKSIGNSIZE)
+default_fontsize = 1
 
 def get_instance_mediapath(instance):
     return os.path.join(settings.PATH_MEDIA_INSTANCES, str(instance.id))
@@ -23,16 +21,24 @@ def name_picture(instance_picture, filename):
     #The instance picture related instance has already been saved to the DB when we save the instance picture
     return os.path.join(get_instance_mediapath(instance_picture.instance), filename)
 
-def name_tag(instance, filename=None):
+def get_tagdir(instance):
     return os.path.join(
         get_instance_mediapath(instance), 
-        settings.PATH_TAGFILE
+        settings.PATH_TAGDIR,
+    )
+
+def name_tag(instance, filename=None):
+    return os.path.join(
+        get_tagdir(instance),
+        settings.PATH_TAGFILEFORMATSTRING % (
+            instance.instanciated_release.get_display_name().replace(' ', '-')),
     )
 
 
 def generate_qr(id, object_typename=None):
     qr = qrcode.QRCode(
         box_size = settings.TAG_QR_BOXSIZE,
+        border = settings.TAG_QR_BORDER,
     )
 
     qrdata = ''
@@ -43,11 +49,51 @@ def generate_qr(id, object_typename=None):
 
     return qr.make_image()._img
 
+def get_textwidth():
+    return settings.TAG_LEFTCOLUMN_WIDTH - settings.TAG_TEXT_BORDER_PAD
+
+def get_textheight():
+    return settings.TAG_HEIGHT - 2*settings.TAG_BORDER - settings.TAG_INSTANCEDETAIL_HEIGHT
+
+def optimize_fontsize(column_count, row_count, fontfile, size_limit, guess=None):
+    # if default_fontsize was given as default, its initial value would be bound forever to default guess.
+    if guess is None:
+        guess = default_fontsize
+    #let's protect ourselves from mutability in case something mutable is given (GIMST : god i miss static typing)
+    inner_guess = guess
+    majored = False
+
+    while True:
+        font = ImageFont.truetype(fontfile, inner_guess)
+        current_size = (font.getsize('_')[0]*column_count,
+                        font.getsize('_')[1]*row_count)
+
+        def overflow(size, limit):
+            return size[0]>limit[0] or size[1]>limit[1]
+
+        if  overflow(current_size, size_limit):
+            majored = True
+            inner_guess -= 1
+        else:
+            if majored : return inner_guess
+            else : inner_guess += 1
+
+#update default_fontsize to a reasonable value
+default_fontsize = optimize_fontsize(
+                    settings.TAG_MIN_COLS,
+                    1,
+                    settings.TAG_FONT_TITLE,
+                    (get_textwidth(), get_textheight(),))
+
+gfont_title = ImageFont.truetype(settings.TAG_FONT_TITLE, default_fontsize)
+gfont_detail = ImageFont.truetype(settings.TAG_FONT_DETAIL, settings.TAG_FONT_DETAILSIZE)
+gfont_checksign = ImageFont.truetype(settings.TAG_FONT_CHECKSIGN, settings.TAG_FONT_CHECKSIGNSIZE)
+
 def get_textsize(text, font):
     return font.getsize(text)
 
 def get_titlesize(text):
-    return get_textsize(text, font_title)
+    return get_textsize(text, gfont_title)
 
 # \todo : implement a nice layout system instead of hardcoded positions (like flows in html  ; )
 """ Organize the final aspect of the printed tag (in a rather rigid way).
@@ -56,19 +102,10 @@ Takes: -a release_img (generic info about the release) and put it at the top of 
         -an instance_img (specific info about this instance) and put it at the bottom of the left columng.
         -a qr_img and put it at the top of the right column.""" 
 def organize_tag(release_img, instance_img, qr_img, border=True):
-    
-    if border:
-        border_size = 1
-    else:
-        border_size = 0
+    border_size = settings.TAG_BORDER
 
-    left_width = max(
-        release_img.size[0],
-        instance_img.size[0],
-        settings.TAG_MIN_COLS*get_textsize('_', font_title)[0]
-    )
-    width = 2*border_size + qr_img.size[0] + left_width
-    height = 2*border_size + max(qr_img.size[1], (release_img.size[1]+instance_img.size[1]))
+    width = settings.TAG_WIDTH
+    height = settings.TAG_HEIGHT
 
     final_image = Image.new('RGB', (width, height), 'white')
     draw = ImageDraw.Draw(final_image)
@@ -78,7 +115,13 @@ def organize_tag(release_img, instance_img, qr_img, border=True):
     final_image.paste(release_img, (border_size, border_size))
     #we want to put the instance details at the bottom edge
     final_image.paste(instance_img, (border_size, height-border_size-instance_img.size[1]))
-    final_image.paste(qr_img, (border_size+left_width, border_size))
+
+    qr_topleft = map(
+                    lambda x : (settings.TAG_HEIGHT-x)/2,
+                    qr_img.size)
+    qr_topleft[0] += settings.TAG_WIDTH - settings.TAG_HEIGHT
+
+    final_image.paste(qr_img, tuple(qr_topleft))
     
     return final_image
 
@@ -286,36 +329,57 @@ class Release(models.Model):
     def __unicode__(self):
         return self.realised_concept.common_name
 
-    def get_tag(self):
+    def get_display_name(self):
+        return self.realised_concept.common_name
+
+    def get_name_color(self):
         name_color = 'black'
         try:
             name_color = type(self).Dna.name_color
         except AttributeError:
             pass
-        name = stringer.balance_string(self.realised_concept.common_name, settings.TAG_MAX_LINES, settings.TAG_MIN_COLS) 
-        name_lines = name.split(os.linesep)
+        return name_color
 
-        def add(x, y):
-            return x+y
-        name_width = reduce(max, [width for width, height in map(get_titlesize, name_lines)])
-        name_height = reduce(add, [height for width, height in map(get_titlesize, name_lines)])
+    def get_tag(self):
+        name_color = self.get_name_color()
+        name = stringer.balance_string(
+                    self.get_display_name(),
+                    settings.TAG_MAX_LINES,
+                    settings.TAG_MIN_COLS) 
+
+        name_lines = name.split(os.linesep)
+        name_cols = reduce(max, [len(text) for text in name_lines]+[settings.TAG_MIN_COLS])
+
         complement = self.get_tag_complement()
         if complement:
-            complement_size = get_textsize(complement, font_detail)
+            complement_size = get_textsize(complement, gfont_title)
         else:
             complement_size = (0, 0)
 
+        #\todo : implement a textsize optimization instead of raising...
+        if complement_size[0] > get_textwidth():
+            raise Exception('Complement size is bigger than allowed text width')
+
+        name_width = get_textwidth()
+        name_height = get_textheight()-complement_size[1]
+        title_fontsize = optimize_fontsize(
+                            name_cols,
+                            len(name_lines),
+                            settings.TAG_FONT_TITLE,
+                            (name_width, name_height),)
+        title_font = ImageFont.truetype(settings.TAG_FONT_TITLE, title_fontsize)
+
         left_pad = settings.TAG_TEXT_BORDER_PAD
-        release_img = Image.new('RGB', (max(name_width, complement_size[0])+left_pad, name_height+complement_size[1]), 'white')
+        release_img = Image.new('RGB', (name_width+left_pad, name_height+complement_size[1]), 'white')
         release_draw = ImageDraw.Draw(release_img)
 
         offset = 0
         for name_part in name_lines:
-            release_draw.text((left_pad, offset), name_part, font=font_title, fill=name_color)
-            offset += release_draw.textsize(name_part, font=font_title)[1]
+            release_draw.text((left_pad, offset), name_part, font=title_font, fill=name_color)
+            offset += release_draw.textsize(name_part, font=title_font)[1]
 
         if complement:
-            release_draw.text((left_pad, offset), complement, font=font_title, fill='black')
+            release_draw.text((left_pad, offset), complement, font=gfont_title, fill='black')
 
         return release_img
 
@@ -357,6 +421,7 @@ class Instance(InstanceParent):
         return str(self.id)+' '+str(self.instanciated_release)
 
     def generate_tag(self):
+        border = True
         release_subclass = Release.objects.get_subclass(id=self.instanciated_release.id)
         ReleaseSpecifics = type(release_subclass).Dna.specifics
         #generate the qrcode base on Instance.id (i.e. per instance data)
@@ -370,7 +435,7 @@ class Instance(InstanceParent):
         #(i.e. per instance data)
         instance_image = self._generate_instance_tag(ReleaseSpecifics)
 
-        return organize_tag(release_image, instance_image, qr_image)
+        return organize_tag(release_image, instance_image, qr_image, border)
 
     def _generate_instance_tag(self, ReleaseSpecifics):
         try:
@@ -387,7 +452,7 @@ class Instance(InstanceParent):
             specifics_image = Image.new('RGB', (0, 0), 'white')
 
         idtext = str(self.id).rjust(settings.TAG_ID_LEFTPADDING_CHARS)
-        idtext_size = get_textsize(idtext, font_detail) 
+        idtext_size = get_textsize(idtext, gfont_detail) 
 
         spacing = settings.TAG_INSTANCEDATA_SPACING 
         size = (
@@ -402,7 +467,7 @@ class Instance(InstanceParent):
                 (specifics_image.size[0] + spacing + parent_image.size[0] + spacing,
                 (max(idtext_size[1], settings.TAG_INSTANCEDETAIL_HEIGHT)-idtext_size[1])/2),
             idtext,
-            font = font_detail,
+            font = gfont_detail,
             fill='black',)
 
         return instance_image 
@@ -606,7 +671,7 @@ class WorkingSpecifics(AbstractSpecifics):
     def get_tag(self):
         work = settings.STR_WORK
 
-        text_size = get_textsize(work, font_detail)
+        text_size = get_textsize(work, gfont_detail)
 
         side = settings.TAG_CHECKBOX_SIDE
         spacing = settings.TAG_TEXT_BORDER_PAD 
@@ -614,7 +679,7 @@ class WorkingSpecifics(AbstractSpecifics):
         workingbox_img = Image.new('RGB', (text_size[0]+side+spacing, height), 'white')
         draw = ImageDraw.Draw(workingbox_img)
 
-        draw.text([0, (height-text_size[1])/2], work, font=font_detail, fill='black')
+        draw.text([0, (height-text_size[1])/2], work, font=gfont_detail, fill='black')
         up_left = (text_size[0]+spacing, (height-side)/2)
         #draw.rectangle documentation is too laconic, we are missing the right edge of the square if we do not substract 1 from its side because it seems that we are defining the two points on the outline
         down_right = (up_left[0] + side-1, up_left[1] + side-1) 
@@ -625,9 +690,9 @@ class WorkingSpecifics(AbstractSpecifics):
             up_left[1] + settings.TAG_CHECKSIGN_PAD[1])
 
         if (self.working==WorkingState.YES):
-            draw.text(check_pos, 'V', font=font_checksign, fill='green')
+            draw.text(check_pos, 'V', font=gfont_checksign, fill='green')
         elif (self.working==WorkingState.NO):
-            draw.text(check_pos, 'X', font=font_checksign, fill='red')
+            draw.text(check_pos, 'X', font=gfont_checksign, fill='red')
 
         return workingbox_img
         
