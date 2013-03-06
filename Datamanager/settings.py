@@ -11,7 +11,9 @@ TAG_LEFTCOLUMN_WIDTH = TAG_WIDTH-TAG_HEIGHT - 2*TAG_BORDER
 
 TAG_ID_LEFTPADDING_CHARS = 5 
 TAG_MAX_LINES = 3 
+TAG_MAXLINES_COMPLEMENT = 2
 TAG_MIN_COLS = 10 
+TAG_MINCOLS_COMPLEMENT = 15 
 
 TAG_FONT_TITLE = '/usr/share/fonts/truetype/liberation/LiberationMono-Bold.ttf'
 TAG_FONT_DETAIL = '/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf'
@@ -41,4 +43,5 @@ URL_ADD_INSTANCE = 'instance/add/'
 URL_PRINT_INSTANCE = 'instance/print/'
 URL_TAG_REDIRECT = 'admin/Datamanager/release/'
 
-STR_WORK = 'Wk'
+STR_WORK = u'Wk'
+STR_LOOSE = u'l0'

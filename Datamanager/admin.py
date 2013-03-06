@@ -35,6 +35,9 @@ class ReleaseAdmin(admin.ModelAdmin):
     instanciate_link.allow_tags = True
     instanciate_link.short_description = 'Add instance'
 
+class ComboPackAdmin(ReleaseAdmin):
+    pass
+
 class ConsoleAdmin(ReleaseAdmin):
     pass
 
@@ -121,6 +124,7 @@ class InstanceAdmin(admin.ModelAdmin):
         return inline_instances
 
 admin.site.register(Concept, ConceptAdmin)
+admin.site.register(ComboPack, ComboPackAdmin)
 admin.site.register(Console, ConsoleAdmin)
 admin.site.register(Game, GameAdmin)
 admin.site.register(Accessory, AccessoryAdmin)

@@ -139,7 +139,11 @@ class Subtype:
         CONSOLE = u'CONSOLE'
         GAME = u'GAME'
         ACCESSORY = u'ACCESSORY'
+        COMBO = u'COMBO'
 
+    #This option will not be in the choices on the webform : it will be used by the initial fixture to create the '_combopack_' concept
+    COMBO = u'__COMBO'
+    #We can use the category value, since it is a meaningfull name in these cases
     CONSOLE = Category.CONSOLE 
     GAME = Category.GAME
     
@@ -199,10 +203,12 @@ class Subtype:
      }
 
     @classmethod
-    def get_choices(cls):
+    def get_choices(cls, max_len):
         accessories = []
         others = []
         for key, value in cls.DICT.items():
+            if (len(value[0])>max_len):
+                raise Exception('Value : ' + value[0] + ' exceeds the maximum length for the field ('+str(max_len)+').')
             if value[1]==cls.Category.ACCESSORY:
                 accessories.append((key, value[0]))
             else:
@@ -214,7 +220,8 @@ class Concept(models.Model):
     complete_name = models.CharField(max_length=180, unique=True, blank=True, null=True)
 
     company = models.ForeignKey(Company, blank=True, null=True)
-    category = models.CharField(max_length=20, choices=Subtype.get_choices())
+    __CATEGORY_MAXLEN = 20  
+    category = models.CharField(max_length=__CATEGORY_MAXLEN, choices=Subtype.get_choices(__CATEGORY_MAXLEN))
 
     def __unicode__(self):
         return self.common_name
@@ -231,12 +238,13 @@ class Origin():
     GIFT = u'GF'
 
 #element :    key(=value to be stored in DB) : (web display value, tag spot color)
+#colors, see : http://www.w3schools.com/html/html_colornames.asp
     ORIGIN_DICT = {
-        ORIGINAL : (u'Original', 'green'),
-        BUY_USAGE : (u'Buy usage', 'blue'),
-        BUY_COLLEC : (u'Buy collection', 'red'),
-        BUY_AGAIN : (u'Buy back', 'yellow'),
-        GIFT : (u'Gift', 'pink'),
+        ORIGINAL : (u'Original', 'red'),
+        BUY_USAGE : (u'Buy usage', 'royalblue'),
+        BUY_COLLEC : (u'Buy collection', 'green'),
+        BUY_AGAIN : (u'Buy back', 'gold'),
+        GIFT : (u'Gift', 'hotpink'),
     }
 
     @classmethod
@@ -319,7 +327,7 @@ class Attribute(models.Model):
 
 class Release(models.Model):
     realised_concept = models.ForeignKey(Concept)
-    name = models.CharField(max_length=60, blank=True)
+    name = models.CharField(max_length=60, blank=True, verbose_name="Release's name")
     date = models.DateField(blank=True, null=True)
     specificity_text = models.CharField(max_length=60, blank=True)
     attribute = models.ManyToManyField(Attribute, blank=True)
@@ -350,15 +358,29 @@ class Release(models.Model):
         name_lines = name.split(os.linesep)
         name_cols = reduce(max, [len(text) for text in name_lines]+[settings.TAG_MIN_COLS])
 
-        complement = self.get_tag_complement()
-        if complement:
-            complement_size = get_textsize(complement, gfont_title)
-        else:
-            complement_size = (0, 0)
+        complement = stringer.balance_string(
+                        self.get_tag_complement(),
+                        settings.TAG_MAXLINES_COMPLEMENT,
+                        settings.TAG_MINCOLS_COMPLEMENT)
 
-        #\todo : implement a textsize optimization instead of raising...
-        if complement_size[0] > get_textwidth():
-            raise Exception('Complement size is bigger than allowed text width')
+        complement_lines = complement.split(os.linesep)
+        complement_cols = reduce(max, [len(text) for text in complement_lines]+[settings.TAG_MINCOLS_COMPLEMENT])
+
+        def get_complementsize(cols, rows, font):
+            charsize = get_textsize('_', font)
+            size = (charsize[0]*cols, charsize[1]*rows)
+            return size
+        
+        if complement:
+            complement_size = get_complementsize(complement_cols, len(complement_lines), font=gfont_title)
+            complement_fontsize = optimize_fontsize(
+                                complement_cols,
+                                len(complement_lines),
+                                settings.TAG_FONT_TITLE,
+                                (get_textwidth(), complement_size[1]),)
+            complement_font = ImageFont.truetype(settings.TAG_FONT_TITLE, complement_fontsize)
+            complement_size = get_complementsize(complement_cols, len(complement_lines), font=complement_font)
+            print str(complement_size) + '  ' + str(len(complement_lines))
 
         name_width = get_textwidth()
         name_height = get_textheight()-complement_size[1]
@@ -378,8 +400,9 @@ class Release(models.Model):
             release_draw.text((left_pad, offset), name_part, font=title_font, fill=name_color)
             offset += release_draw.textsize(name_part, font=title_font)[1]
 
-        if complement:
-            release_draw.text((left_pad, offset), complement, font=gfont_title, fill='black')
+        for complement_part in complement_lines:
+            release_draw.text((left_pad, offset), complement_part, font=complement_font, fill='black')
+            offset += release_draw.textsize(complement_part, font=complement_font)[1]
 
         return release_img
 
@@ -423,7 +446,6 @@ class Instance(InstanceParent):
     def generate_tag(self):
         border = True
         release_subclass = Release.objects.get_subclass(id=self.instanciated_release.id)
-        ReleaseSpecifics = type(release_subclass).Dna.specifics
         #generate the qrcode base on Instance.id (i.e. per instance data)
         qr_image = generate_qr(self.id, type(self).__name__.lower()) 
         
@@ -433,17 +455,23 @@ class Instance(InstanceParent):
 
         #get the instance details 
         #(i.e. per instance data)
-        instance_image = self._generate_instance_tag(ReleaseSpecifics)
+        try:
+            ReleaseSpecifics = type(release_subclass).Dna.specifics
+        except AttributeError:
+            ReleaseSpecifics = None
+        instance_image = self.__generate_instance_tag(ReleaseSpecifics)
 
         return organize_tag(release_image, instance_image, qr_image, border)
 
-    def _generate_instance_tag(self, ReleaseSpecifics):
-        try:
-            #get tag complement from the ReleaseSpecifics attached to this instance (i.e. per instance data)
-            specifics = ReleaseSpecifics.objects.get(instance=self.id)
-            specifics_image = specifics.get_tag();
-        except AttributeError: #in case the release_subclass does not have specifics attached
-            specifics_image = Image.new('RGB', (0, 0), 'white')
+    def __generate_instance_tag(self, ReleaseSpecifics):
+        specifics_image = Image.new('RGB', (0, 0), 'white')
+        if ReleaseSpecifics:
+            try:
+                #get tag complement from the ReleaseSpecifics attached to this instance (i.e. per instance data)
+                specifics = ReleaseSpecifics.objects.get(instance=self.id)
+                specifics_image = specifics.get_tag();
+            except AttributeError: #in case the specifics does not define get_tag 
+                pass
 
         try:
             #get tag complement from the InstanceParent (i.e. per instance data)
@@ -456,15 +484,15 @@ class Instance(InstanceParent):
 
         spacing = settings.TAG_INSTANCEDATA_SPACING 
         size = (
-            specifics_image.size[0] + parent_image.size[0] + spacing + idtext_size[0] + spacing,
-            max(specifics_image.size[1], parent_image.size[1], idtext_size[1])
-        )        
+            get_textwidth(),
+            max(specifics_image.size[1], parent_image.size[1], idtext_size[1]))
+
         instance_image = Image.new('RGB', size, 'white')
         draw = ImageDraw.Draw(instance_image)
         instance_image.paste(parent_image, (0, 0))
         instance_image.paste(specifics_image, (parent_image.size[0]+spacing, 0))
         draw.text(
-                (specifics_image.size[0] + spacing + parent_image.size[0] + spacing,
+                (size[0] - idtext_size[0],
                 (max(idtext_size[1], settings.TAG_INSTANCEDETAIL_HEIGHT)-idtext_size[1])/2),
             idtext,
             font = gfont_detail,
@@ -628,22 +656,30 @@ class Color:
     GOLD = u'GLD'
     SILVER = u'SIL'
 
-    CHOICES = (
-        (BLACK, u'Black'),
-        (WHITE, u'White'),
-        (GREY, u'Grey'),
-        (RED, u'Red'),
-        (GREEN, u'Green'),
-        (BLUE, u'Blue'),
-        (YELLOW, u'Yellow'),
-        (ORANGE, u'Orange'),
-        (PINK, u'Pink'),
-        (BROWN, u'Brown'),
-        (PURPLE, u'Purple'),
+    DICT = { 
+        BLACK : (u'Black',),
+        WHITE : (u'White',),
+        GREY : (u'Grey',),
+        RED : (u'Red',),
+        GREEN : (u'Green',),
+        BLUE : (u'Blue',),
+        YELLOW : (u'Yellow',),
+        ORANGE : (u'Orange',),
+        PINK : (u'Pink',),
+        BROWN : (u'Brown',),
+        PURPLE : (u'Purple',),
 
-        (GOLD, u'Gold'),
-        (SILVER, u'Silver'),
-    )
+        GOLD : (u'Gold',),
+        SILVER : (u'Silver',),
+    }
+
+    @classmethod
+    def get_choices(cls):
+        return [(key, value[0]) for key, value in cls.DICT.items()]
+
+    @classmethod
+    def display_name(cls, color):
+        return cls.DICT[color][0]
 
 class WorkingState:
     YES = u'Y'
@@ -697,6 +733,24 @@ class WorkingSpecifics(AbstractSpecifics):
         return workingbox_img
         
 
+class ComboPack(Release):
+    class Dna:
+        category = Subtype.Category.COMBO
+        name_color = u'grey'
+
+    region = models.CharField(max_length=2, choices=Region.CHOICES, blank=True) 
+    company = models.ForeignKey(Company, blank=True, null=True)
+    related_platforms = models.ManyToManyField(Platform)
+        
+    def __unicode__(self):
+        return '[combo] ' + self.name
+
+    def get_tag_complement(self):
+        complement_text = ''
+        if self.name:
+            complement_text += self.name
+        return complement_text
+
 class ConsoleSpecifics(WorkingSpecifics):
     region_modded = models.BooleanField()
     copy_modded = models.BooleanField()
@@ -709,17 +763,22 @@ class Console(Release):
 
     loose = models.BooleanField()
     region = models.CharField(max_length=2, choices=Region.CHOICES) 
-    color = models.CharField(max_length=3, choices=Color.CHOICES) 
+    color = models.CharField(max_length=3, choices=Color.get_choices()) 
     implemented_platforms = models.ManyToManyField(Platform)
 
     version = models.CharField(max_length=20, blank=True, null=True)
     constructor = models.ForeignKey(Company, blank=True, null=True)
 
     def __unicode__(self):
-        return '[console] ' + str(self.id) + " " + super(Console, self).__unicode__()
+        return '[console] ' + str(self.id) + ' ' + super(Console, self).__unicode__()
 
     def get_tag_complement(self):
-        return '[' + self.region + ']'
+        complement = '[' + self.region + ']'
+        if self.version:
+            complement += ' v.' + self.version
+        if self.loose:
+            complement += ' '+settings.STR_LOOSE
+        return complement
    
 class GameSpecifics(WorkingSpecifics):
     pass
@@ -735,6 +794,12 @@ class Game(Release):
     platform = models.ForeignKey(Platform)
     publisher = models.ForeignKey(Company, blank=True, null=True)
 
+    def get_tag_complement(self):
+        complement = '[%s] %s' % (self.region, self.platform.name)
+        if self.loose:
+            complement += ' '+settings.STR_LOOSE
+        return complement
+
 class AccessorySpecifics(WorkingSpecifics):
     pass
 
@@ -746,9 +811,18 @@ class Accessory(Release):
 
     loose = models.BooleanField()
     region = models.CharField(max_length=2, choices=Region.CHOICES, blank=True) 
-    color = models.CharField(max_length=3, choices=Color.CHOICES) 
+    color = models.CharField(max_length=3, choices=Color.get_choices()) 
     compatible_platforms = models.ManyToManyField(Platform)
 
     wireless = models.BooleanField()
     force_feedback = models.BooleanField()
     rumble_feedback = models.BooleanField()
+
+    def get_tag_complement(self):
+        complement = ''
+        if self.region:
+            complement += '[' + self.region + '] '
+        complement += Color.display_name(self.color)
+        if self.loose:
+            complement += ' '+settings.STR_LOOSE
+        return complement
