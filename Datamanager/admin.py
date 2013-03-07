@@ -27,6 +27,9 @@ class SpecificityCompositionInline(admin.TabularInline):
     extra = 2
 
 class ReleaseForm(forms.ModelForm):
+    class Meta:
+        model = Release
+
     def __init__(self, *args, **kwargs):
         super(ReleaseForm, self).__init__(*args, **kwargs)
         #filter out the implicit attributes from the selectable list
@@ -67,11 +70,19 @@ class ConsoleAdmin(ReleaseAdmin):
 class GameAdmin(ReleaseAdmin):
     exclude = ()
 
+#We change the SelectMultiple widget to show all available colors at once.
+class AccessoryForm(ReleaseForm):
+    class Meta:
+        model=Accessory
+        widgets = {
+            'colors': forms.SelectMultiple(attrs={'size': Color.objects.all().count()}),
+        }
+
 class AccessoryAdmin(ReleaseAdmin):
+    form = AccessoryForm
     #filter_horizontal = ReleaseAdmin.filter_horizontal + [
     #    'colors',
     #] 
-    pass
 
 class InstanceAttributeInline(admin.StackedInline):
     model = InstanceAttribute      
