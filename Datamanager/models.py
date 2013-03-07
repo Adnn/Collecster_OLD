@@ -150,6 +150,7 @@ class Subtype:
     
     ANALOG_PAD = u'ANALOG_PAD'
     BATTERY = u'BATTERY'
+    BUZZER = u'BUZZER'
     CAMERA = u'CAMERA'
     COVER = u'COVER'
     DANCEMAT = u'DANCEMAT'
@@ -180,6 +181,7 @@ class Subtype:
 
         ANALOG_PAD : ('Analog pad', Category.ACCESSORY),
         BATTERY : ('Battery', Category.ACCESSORY),
+        BUZZER : ('Buzzer', Category.ACCESSORY),
         CAMERA : ('Camera', Category.ACCESSORY),
         COVER : ('Cover', Category.ACCESSORY),
         DANCEMAT : ('Dancemat', Category.ACCESSORY),
@@ -324,6 +326,7 @@ class Attribute(models.Model):
     category = models.ForeignKey(AttributeCategory)
     name = models.CharField(max_length=60)
     tipe = models.CharField(max_length=3, choices=AttributeType.get_choices())
+    description = models.CharField(max_length=120, blank=True)
 
     implicit = models.BooleanField(default=False)
 
@@ -342,7 +345,8 @@ class Release(models.Model):
     objects = InheritanceManager()
 
     def __unicode__(self):
-        text = self.realised_concept.common_name
+        self = Release.objects.get_subclass(id=self.id)
+        text = '[' + type(self).__name__ + '] ' + self.realised_concept.common_name
         if (self.name):
             text += '::'+self.name
         if self.immaterial:
