@@ -44,11 +44,11 @@ class InstanceAttributeModelForm(forms.ModelForm):
         super(InstanceAttributeModelForm, self).__init__(*args, **kwargs)
         attribute = InstanceAttributeModelForm.initial_attributes[InstanceAttributeModelForm.form_id]
         if InstanceAttributeModelForm.init:
-            self.initial = attribute
-        self.fields['attribute'].queryset = Attribute.objects.filter(id=attribute['attribute'].id)
+            self.initial = {'attribute' : attribute}
+        self.fields['attribute'].queryset = Attribute.objects.filter(id=attribute.id)
         self.fields['attribute'].empty_label = None
         
-        WidgetClass, options = AttributeType.get_class_and_options(attribute['attribute'].tipe)
+        WidgetClass, options = AttributeType.get_class_and_options(attribute.tipe)
         if options==None:
             options = {}
         self.fields['value'].widget = WidgetClass(**options)
@@ -109,11 +109,7 @@ def add_instance(request, release_id):
     instanciated_release = Release.objects.get_subclass(id=release_id)
     DerivedRelease = type(instanciated_release)
 
-    initial_attributes = []
-    attributes_count = 0
-    for attribute in instanciated_release.attribute.all():
-        initial_attributes.append({'attribute':attribute,})
-        attributes_count += 1
+    initial_attributes = instanciated_release.get_attributes()
 
     composing_releases_id = []
     composition_count = 0
@@ -135,7 +131,7 @@ def add_instance(request, release_id):
     InstanceAttributeModelForm.initial_attributes = initial_attributes
     #We get the factory for an inlineformset (derived from modelformset) that is modeling InstanceAttribute and links it to an Instance
     #with modelformset (and derived inlineformset), initial values only apply to extra forms : so we have to allow the exact number of extra forms matching the number of initials.
-    InstanceAttributeFormset = inlineformset_factory(Instance, InstanceAttribute, form=InstanceAttributeModelForm, can_delete=False, extra=attributes_count)
+    InstanceAttributeFormset = inlineformset_factory(Instance, InstanceAttribute, form=InstanceAttributeModelForm, can_delete=False, extra=len(initial_attributes))
 
     InstanceCompositionModelForm.form_id = 0
     InstanceCompositionModelForm.composing_releases_ids = composing_releases_id

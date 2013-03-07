@@ -80,20 +80,21 @@ def optimize_fontsize(column_count, row_count, fontfile, size_limit, guess=None)
 
 #update default_fontsize to a reasonable value
 default_fontsize = optimize_fontsize(
-                    settings.TAG_MIN_COLS,
+                    settings.TAG_APPROXMAXCOLS_COMPLEMENT,
                     1,
                     settings.TAG_FONT_TITLE,
                     (get_textwidth(), get_textheight(),))
 
-gfont_title = ImageFont.truetype(settings.TAG_FONT_TITLE, default_fontsize)
+gfont_complement = ImageFont.truetype(settings.TAG_FONT_COMPLEMENT, default_fontsize)
 gfont_detail = ImageFont.truetype(settings.TAG_FONT_DETAIL, settings.TAG_FONT_DETAILSIZE)
 gfont_checksign = ImageFont.truetype(settings.TAG_FONT_CHECKSIGN, settings.TAG_FONT_CHECKSIGNSIZE)
 
 def get_textsize(text, font):
     return font.getsize(text)
 
-def get_titlesize(text):
-    return get_textsize(text, gfont_title)
+"""Deprecated"""
+#def get_titlesize(text):
+#    return get_textsize(text, gfont_title)
 
 # \todo : implement a nice layout system instead of hardcoded positions (like flows in html  ; )
 """ Organize the final aspect of the printed tag (in a rather rigid way).
@@ -162,6 +163,7 @@ class Subtype:
     KEYBOARD = u'KEYBOARD'
     MAGNIFIER = u'MAGNIFIER'
     MEMORYCARD = u'MEMORYCARD'
+    MICROPHONE = u'MICROPHONE'
     MODEM = u'MODEM'
     MOUSE = u'MOUSE'
     MULTITAP = u'MULTITAP'
@@ -191,6 +193,7 @@ class Subtype:
         KEYBOARD : ('Keyboard', Category.ACCESSORY),
         MAGNIFIER : ('Magnifier', Category.ACCESSORY),
         MEMORYCARD : ('Memorycard', Category.ACCESSORY),
+        MICROPHONE : ('Microphone', Category.ACCESSORY),
         MODEM : ('Modem', Category.ACCESSORY),
         MOUSE : ('Mouse', Category.ACCESSORY),
         MULTITAP : ('Multitap', Category.ACCESSORY),
@@ -262,7 +265,7 @@ class InstanceParent(models.Model):
 
     def get_parent_tag(self):
         side = settings.TAG_INSTANCEDETAIL_HEIGHT
-        diameter = side/2
+        diameter = settings.TAG_CHECKBOX_SIDE#side/2
         padding = (side-diameter)/2
 
         ellipse_bbox = [padding, padding, padding+diameter, padding+diameter]
@@ -322,6 +325,8 @@ class Attribute(models.Model):
     name = models.CharField(max_length=60)
     tipe = models.CharField(max_length=3, choices=AttributeType.get_choices())
 
+    implicit = models.BooleanField(default=False)
+
     def __unicode__(self):
         return u'['+self.category.name+'] '+self.name
 
@@ -345,7 +350,29 @@ class Release(models.Model):
         return text
 
     def get_display_name(self):
-        return self.realised_concept.common_name
+        return self.name or self.realised_concept.common_name
+
+    def get_attributes(self):
+        attribute_list = list(self.attribute.all())
+
+        try:
+            implicits = type(self).Dna.implicit_attributes
+        except AttributeError:
+            implicits = ()
+
+        for filter_dict, iterations in implicits:
+            if (isinstance(iterations, str)):
+                release_attr = getattr(self, iterations)
+                count = (callable(release_attr) and [release_attr()] or [release_attr])[0]
+            else:
+                count = iterations
+
+            filter_dict['implicit']=True
+            attribute = Attribute.objects.get(**filter_dict)
+
+            attribute_list.extend([attribute]*count)
+
+        return attribute_list
 
     def get_name_color(self):
         name_color = 'black'
@@ -360,7 +387,7 @@ class Release(models.Model):
         name = stringer.balance_string(
                     self.get_display_name(),
                     settings.TAG_MAX_LINES,
-                    settings.TAG_MIN_COLS) 
+                    settings.TAG_APPROXMAX_COLS) 
 
         name_lines = name.split(os.linesep)
         name_cols = reduce(max, [len(text) for text in name_lines]+[settings.TAG_MIN_COLS])
@@ -368,7 +395,7 @@ class Release(models.Model):
         complement = stringer.balance_string(
                         self.get_tag_complement(),
                         settings.TAG_MAXLINES_COMPLEMENT,
-                        settings.TAG_MINCOLS_COMPLEMENT)
+                        settings.TAG_APPROXMAXCOLS_COMPLEMENT)
 
         complement_lines = complement.split(os.linesep)
         complement_cols = reduce(max, [len(text) for text in complement_lines]+[settings.TAG_MINCOLS_COMPLEMENT])
@@ -379,15 +406,16 @@ class Release(models.Model):
             return size
         
         if complement:
-            complement_size = get_complementsize(complement_cols, len(complement_lines), font=gfont_title)
+#limit the complement height to the max number of lines times the height of the default font
+            complement_maxheight = get_textsize('_', gfont_complement)[1] \
+                                   * settings.TAG_MAXLINES_COMPLEMENT
             complement_fontsize = optimize_fontsize(
                                 complement_cols,
                                 len(complement_lines),
                                 settings.TAG_FONT_TITLE,
-                                (get_textwidth(), complement_size[1]),)
-            complement_font = ImageFont.truetype(settings.TAG_FONT_TITLE, complement_fontsize)
+                                (get_textwidth(), complement_maxheight),)
+            complement_font = ImageFont.truetype(settings.TAG_FONT_COMPLEMENT, complement_fontsize)
             complement_size = get_complementsize(complement_cols, len(complement_lines), font=complement_font)
-            print str(complement_size) + '  ' + str(len(complement_lines))
 
         name_width = get_textwidth()
         name_height = get_textheight()-complement_size[1]
@@ -539,6 +567,9 @@ class InstanceAttribute(models.Model):
     attribute = models.ForeignKey(Attribute)
     value = models.CharField(max_length=60, blank=True)
 
+    def __unicode__(self):
+        return unicode(self.attribute) + u' for :: ' + unicode(self.instance)
+
 class InstanceComposition(models.Model):
     container_instance = models.ForeignKey(Instance, related_name="container_instance")
     element_instance = models.ForeignKey(Instance, unique=True)
@@ -550,7 +581,7 @@ class AbstractSpecifics(models.Model):
     instance = models.ForeignKey(Instance, unique=True)
 
     def __unicode__(self):
-        return 'for :: ' + str(self.instance) 
+        return 'for :: ' + unicode(self.instance) 
 
 
 #
@@ -647,7 +678,10 @@ class Region:
         (JAPAN, u'Japan'),
     )
     
-class Color:
+class ColorChoices:
+    """ Deprecated since colors are now defined in a table
+    to allow multiple references externally """
+
     BLACK = u'BLK'
     WHITE = u'WIT'
     GREY = u'GRY'
@@ -687,6 +721,15 @@ class Color:
     @classmethod
     def display_name(cls, color):
         return cls.DICT[color][0]
+
+class Color(models.Model):
+    """Color should be an hidden table listing available color choices (populated by fixture).
+    It appears as a more general solution over the fixed choice field in models, because it allows
+    ManyToOne and ManyToMany relationships very easily"""
+    name = models.CharField(max_length=30, unique=True)
+
+    def __unicode__(self):
+        return self.name
 
 class WorkingState:
     YES = u'Y'
@@ -760,8 +803,9 @@ class ComboPack(Release):
 
     def get_tag_complement(self):
         complement_text = ''
-        if self.name:
-            complement_text += self.name
+        if self.region:
+            complement_text += '[' + self.region + '] '
+        complement += 'combopack'
         return complement_text
 
 class ConsoleSpecifics(WorkingSpecifics):
@@ -773,10 +817,13 @@ class Console(Release):
         specifics = ConsoleSpecifics
         category = Subtype.Category.CONSOLE
         name_color = u'red'
+        implicit_attributes = (
+            ({'name':u'self', 'category__name':u'content'}, 1),
+        )
 
     loose = models.BooleanField()
     region = models.CharField(max_length=2, choices=Region.CHOICES) 
-    color = models.CharField(max_length=3, choices=Color.get_choices()) 
+    color = models.ForeignKey(Color) 
     implemented_platforms = models.ManyToManyField(Platform)
 
     version = models.CharField(max_length=20, blank=True, null=True)
@@ -794,6 +841,7 @@ class Console(Release):
         return complement
    
 class GameSpecifics(WorkingSpecifics):
+    blister = models.BooleanField(u'is blister present ?', default=False)
     pass
 
 class Game(Release):
@@ -801,6 +849,9 @@ class Game(Release):
         specifics = GameSpecifics
         category = Subtype.Category.GAME 
         name_color = u'green'
+        implicit_attributes = (
+            ({'name':u'self', 'category__name':u'content'}, 1),
+        )
 
     loose = models.BooleanField()
     region = models.CharField(max_length=2, choices=Region.CHOICES) 
@@ -821,11 +872,20 @@ class Accessory(Release):
         specifics = AccessorySpecifics
         category = Subtype.Category.ACCESSORY
         name_color = u'blue'
+        implicit_attributes = (
+            ({'name':u'self', 'category__name':u'content'}, 'quantity'),
+        )
 
+    quantity = models.PositiveIntegerField(u'self quantity', default=1)
     loose = models.BooleanField()
     region = models.CharField(max_length=2, choices=Region.CHOICES, blank=True) 
-    color = models.CharField(max_length=3, choices=Color.get_choices()) 
     compatible_platforms = models.ManyToManyField(Platform)
+#\todo : implement something to force at least on color on the accessory
+    """ Allows for multiple colors,
+    designed for accessories with more than one element (quantity > 1),
+    so each element color could appear.
+    Not to be used if a single element shows several colors !"""
+    colors = models.ManyToManyField(Color)
 
     wireless = models.BooleanField()
     force_feedback = models.BooleanField()
@@ -835,7 +895,11 @@ class Accessory(Release):
         complement = ''
         if self.region:
             complement += '[' + self.region + '] '
-        complement += Color.display_name(self.color)
+
+        complement += '/'.join([platform.abbreviated for platform in self.compatible_platforms.all()])
+        complement += ' '
+        complement += '/'.join([color.name.lower() for color in self.colors.all()])
+
         if self.loose:
             complement += ' '+settings.STR_LOOSE
         return complement

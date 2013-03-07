@@ -5,3 +5,5 @@ syntax: glob
 database
 Collecster/localsettings.py
 media/*
+backups/*
+tmp/*

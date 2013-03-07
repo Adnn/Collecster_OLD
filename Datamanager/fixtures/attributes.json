@@ -1,0 +1,200 @@
+[
+  {
+    "pk": 1,
+    "model": "Datamanager.attribute",
+    "fields": {
+      "category": 1,
+      "tipe": "RTN",
+      "name": "cardboard box",
+      "implicit": false
+    }
+  },
+  {
+    "pk": 3,
+    "model": "Datamanager.attribute",
+    "fields": {
+      "category": 1,
+      "tipe": "RTN",
+      "name": "dvd box",
+      "implicit": false
+    }
+  },
+  {
+    "pk": 12,
+    "model": "Datamanager.attribute",
+    "fields": {
+      "category": 1,
+      "tipe": "RTN",
+      "name": "jewel box",
+      "implicit": false
+    }
+  },
+  {
+    "pk": 2,
+    "model": "Datamanager.attribute",
+    "fields": {
+      "category": 1,
+      "tipe": "RTN",
+      "name": "sheath",
+      "implicit": false
+    }
+  },
+  {
+    "pk": 16,
+    "model": "Datamanager.attribute",
+    "fields": {
+      "category": 1,
+      "tipe": "RTN",
+      "name": "spine card",
+      "implicit": false
+    }
+  },
+  {
+    "pk": 17,
+    "model": "Datamanager.attribute",
+    "fields": {
+      "category": 1,
+      "tipe": "RTN",
+      "name": "transparent thermoplastic",
+      "implicit": false
+    }
+  },
+  {
+    "pk": 7,
+    "model": "Datamanager.attribute",
+    "fields": {
+      "category": 2,
+      "tipe": "RTN",
+      "name": "baggies",
+      "implicit": false
+    }
+  },
+  {
+    "pk": 4,
+    "model": "Datamanager.attribute",
+    "fields": {
+      "category": 2,
+      "tipe": "RTN",
+      "name": "inlay",
+      "implicit": false
+    }
+  },
+  {
+    "pk": 15,
+    "model": "Datamanager.attribute",
+    "fields": {
+      "category": 3,
+      "tipe": "RTN",
+      "name": "insert : jewel box",
+      "implicit": false
+    }
+  },
+  {
+    "pk": 5,
+    "model": "Datamanager.attribute",
+    "fields": {
+      "category": 3,
+      "tipe": "RTN",
+      "name": "leaflet",
+      "implicit": false
+    }
+  },
+  {
+    "pk": 6,
+    "model": "Datamanager.attribute",
+    "fields": {
+      "category": 3,
+      "tipe": "RTN",
+      "name": "manual",
+      "implicit": false
+    }
+  },
+  {
+    "pk": 14,
+    "model": "Datamanager.attribute",
+    "fields": {
+      "category": 3,
+      "tipe": "RTN",
+      "name": "registration card",
+      "implicit": false
+    }
+  },
+  {
+    "pk": 8,
+    "model": "Datamanager.attribute",
+    "fields": {
+      "category": 3,
+      "tipe": "RTN",
+      "name": "warranty",
+      "implicit": false
+    }
+  },
+  {
+    "pk": 11,
+    "model": "Datamanager.attribute",
+    "fields": {
+      "category": 4,
+      "tipe": "PRS",
+      "name": "cord-110v",
+      "implicit": false
+    }
+  },
+  {
+    "pk": 10,
+    "model": "Datamanager.attribute",
+    "fields": {
+      "category": 4,
+      "tipe": "PRS",
+      "name": "cord-220v",
+      "implicit": false
+    }
+  },
+  {
+    "pk": 9,
+    "model": "Datamanager.attribute",
+    "fields": {
+      "category": 4,
+      "tipe": "PRS",
+      "name": "scart",
+      "implicit": false
+    }
+  },
+  {
+    "pk": 13,
+    "model": "Datamanager.attribute",
+    "fields": {
+      "category": 4,
+      "tipe": "RTN",
+      "name": "self",
+      "implicit": true
+    }
+  },
+  {
+    "pk": 1,
+    "model": "Datamanager.attributecategory",
+    "fields": {
+      "name": "packaging"
+    }
+  },
+  {
+    "pk": 2,
+    "model": "Datamanager.attributecategory",
+    "fields": {
+      "name": "stuffing"
+    }
+  },
+  {
+    "pk": 3,
+    "model": "Datamanager.attributecategory",
+    "fields": {
+      "name": "papers"
+    }
+  },
+  {
+    "pk": 4,
+    "model": "Datamanager.attributecategory",
+    "fields": {
+      "name": "content"
+    }
+  }
+]

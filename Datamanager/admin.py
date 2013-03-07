@@ -6,6 +6,15 @@ from django.forms.formsets import formset_factory
 
 from Datamanager import settings
 
+class AttributeAdmin(admin.ModelAdmin):
+    readonly_fields= ('implicit',)
+
+    def queryset(self, request):
+        qs = super(AttributeAdmin, self).queryset(request)
+        return qs
+#use the second return to filter out implicit attributes from the list view
+        #return qs.filter(implicit=False)
+    
 #Define an InlineAdminModel on ReleaseCompostion in order to add compositions directly on 'add Release' pages
 class ReleaseCompositionInline(admin.StackedInline):
     model = ReleaseComposition
@@ -17,8 +26,16 @@ class SpecificityCompositionInline(admin.TabularInline):
     model = SpecificityComposition
     extra = 2
 
+class ReleaseForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(ReleaseForm, self).__init__(*args, **kwargs)
+        #filter out the implicit attributes from the selectable list
+        self.fields['attribute'].queryset = Attribute.objects.filter(implicit=False)
+
 #Create a common admin ancestor for all derived Releases models to inherit.
 class ReleaseAdmin(admin.ModelAdmin): 
+    form = ReleaseForm
+
     list_display = ('id', str, 'instanciate_link')
     #since only games can be immaterial, the default is to hide the choice (default being False)
     exclude = ('immaterial',)
@@ -51,6 +68,9 @@ class GameAdmin(ReleaseAdmin):
     exclude = ()
 
 class AccessoryAdmin(ReleaseAdmin):
+    #filter_horizontal = ReleaseAdmin.filter_horizontal + [
+    #    'colors',
+    #] 
     pass
 
 class InstanceAttributeInline(admin.StackedInline):
@@ -147,7 +167,7 @@ admin.site.register(Console, ConsoleAdmin)
 admin.site.register(Game, GameAdmin)
 admin.site.register(Accessory, AccessoryAdmin)
 admin.site.register(Platform, PlatformAdmin)
-admin.site.register(Attribute)
+admin.site.register(Attribute, AttributeAdmin)
 admin.site.register(AttributeCategory)
 admin.site.register(Company)
 

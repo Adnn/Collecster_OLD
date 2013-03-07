@@ -1,0 +1,15 @@
+[
+{ "pk": 1, "model": "Datamanager.color", "fields": { "name": "Black" } },
+{ "pk": 2, "model": "Datamanager.color", "fields": { "name": "White" } },
+{ "pk": 3, "model": "Datamanager.color", "fields": { "name": "Grey" } },
+{ "pk": 4, "model": "Datamanager.color", "fields": { "name": "Red" } },
+{ "pk": 5, "model": "Datamanager.color", "fields": { "name": "Green" } },
+{ "pk": 6, "model": "Datamanager.color", "fields": { "name": "Blue" } },
+{ "pk": 7, "model": "Datamanager.color", "fields": { "name": "Yellow" } },
+{ "pk": 8, "model": "Datamanager.color", "fields": { "name": "Orange" } },
+{ "pk": 9, "model": "Datamanager.color", "fields": { "name": "Pink" } },
+{ "pk": 10, "model": "Datamanager.color", "fields": { "name": "Brown" } },
+{ "pk": 11, "model": "Datamanager.color", "fields": { "name": "Purple" } },
+{ "pk": 12, "model": "Datamanager.color", "fields": { "name": "Gold" } },
+{ "pk": 13, "model": "Datamanager.color", "fields": { "name": "Silver" } }
+]
