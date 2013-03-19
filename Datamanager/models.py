@@ -17,9 +17,13 @@ default_fontsize = 1
 def get_instance_mediapath(instance):
     return os.path.join(settings.PATH_MEDIA_INSTANCES, str(instance.id))
 
-def name_picture(instance_picture, filename):
+def name_instancepicture(instance_picture, filename):
     #The instance picture related instance has already been saved to the DB when we save the instance picture
     return os.path.join(get_instance_mediapath(instance_picture.instance), filename)
+
+def name_bundlepicture(bundle_picture, filename):
+    print str(bundle_picture.bundle.id)
+    return os.path.join(settings.PATH_MEDIA_BUNDLES, str(bundle_picture.bundle.id), filename)
 
 def get_tagdir(instance):
     return os.path.join(
@@ -562,7 +566,7 @@ class PictureDetail():
 
 class InstancePicture(models.Model):
     instance = models.ForeignKey(Instance)
-    image = models.ImageField(upload_to=name_picture)
+    image = models.ImageField(upload_to=name_instancepicture)
     attribute = models.ForeignKey(Attribute, blank=True, null=True)
     detail = models.CharField(max_length=3, choices=PictureDetail.get_choices(), blank=False, default=PictureDetail.GROUP)
 
@@ -591,10 +595,15 @@ class AbstractSpecifics(models.Model):
 #
 # Application specific code 
 #
+     
 class Bundle(models.Model):
     acquisition_date = models.DateField()
 
     objects = InheritanceManager()
+
+class BundlePicture(models.Model):
+    bundle = models.ForeignKey(Bundle)
+    image = models.ImageField(upload_to=name_bundlepicture)
 
 class Country:
     LITHUANIA = u'LT'

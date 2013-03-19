@@ -109,8 +109,12 @@ class BundleCompositionInline(admin.StackedInline):
     model = BundleComposition
     extra = 4
 
+class BundlePictureInline(admin.StackedInline):
+    model = BundlePicture
+    extra = 1 
+
 class BuyingAdmin(admin.ModelAdmin):
-    inlines = [BundleCompositionInline,]
+    inlines = [BundleCompositionInline, BundlePictureInline]
 
 #Solution to allow the duplication of 'empty' common_name values (unique otherwise)
 #from SO : http://stackoverflow.com/questions/454436/unique-fields-that-allow-nulls-in-django
