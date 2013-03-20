@@ -360,9 +360,8 @@ class Release(models.Model):
     def get_display_name(self):
         return self.name or self.realised_concept.common_name
 
-    def get_attributes(self):
-        attribute_list = list(self.attribute.all())
-
+    def get_implicit_querysets(self):
+        queryset_and_count = []
         try:
             implicits = type(self).Dna.implicit_attributes
         except AttributeError:
@@ -376,8 +375,15 @@ class Release(models.Model):
                 count = iterations
 
             filter_dict['implicit']=True
-            attribute = Attribute.objects.get(**filter_dict)
+            queryset_and_count.append( (filter_dict, count) )
 
+        return queryset_and_count
+         
+    def get_attributes(self):
+        attribute_list = list(self.attribute.all())
+
+        for filter_dict, count in self.get_implicit_querysets():
+            attribute = Attribute.objects.get(**filter_dict)
             attribute_list.extend([attribute]*count)
 
         return attribute_list
@@ -629,8 +635,11 @@ class Country:
     )
         
 class Location(models.Model):
+    class Meta:
+        unique_together = (('country', 'city'),)
+
     country = models.CharField(max_length=2, choices=Country.CHOICES)
-    city = models.CharField(max_length=60, unique=True, blank=True)
+    city = models.CharField(max_length=60, blank=True)
 
     def __unicode__(self):
         return '['+self.country+'] ' + self.city
@@ -767,6 +776,9 @@ class Platform(models.Model):
     def __unicode__(self):
         return self.name
 
+    def get_tagname(self):
+        return self.abbreviated or self.name
+
 class WorkingSpecifics(AbstractSpecifics):
     class Meta:
         abstract = True
@@ -892,6 +904,7 @@ class Accessory(Release):
     quantity = models.PositiveIntegerField(u'self quantity', default=1)
     loose = models.BooleanField()
     region = models.CharField(max_length=2, choices=Region.CHOICES, blank=True) 
+    version = models.CharField(max_length=20, blank=True, null=True)
     compatible_platforms = models.ManyToManyField(Platform)
 #\todo : implement something to force at least on color on the accessory
     """ Allows for multiple colors,
@@ -909,7 +922,7 @@ class Accessory(Release):
         if self.region:
             complement += '[' + self.region + '] '
 
-        complement += '/'.join([platform.abbreviated for platform in self.compatible_platforms.all()])
+        complement += '/'.join([platform.get_tagname() for platform in self.compatible_platforms.all()])
         complement += ' '
         complement += '/'.join([color.name.lower() for color in self.colors.all()])
 

@@ -77,7 +77,14 @@ class SpecificsModelForm(forms.ModelForm):
 class InstancePictureModelForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super(InstancePictureModelForm, self).__init__(*args, **kwargs)
-        self.fields['attribute'].queryset = Release.objects.get(id=InstanceForm.release_id).attribute.all()
+        release = Release.objects.get_subclass(id=InstanceForm.release_id)
+        queryset_explicit = release.attribute.all()
+        resulting_queryset = queryset_explicit
+
+        for filter_dict, count in release.get_implicit_querysets():
+            resulting_queryset = resulting_queryset | Attribute.objects.filter(**filter_dict)
+
+        self.fields['attribute'].queryset = resulting_queryset 
 
     def clean(self):
         cleaned_data = super(InstancePictureModelForm, self).clean()
