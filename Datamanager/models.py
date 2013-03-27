@@ -353,6 +353,8 @@ class Release(models.Model):
         text = '[' + type(self).__name__ + '] ' + self.realised_concept.common_name
         if (self.name):
             text += '::'+self.name
+        if (self.specificity_text):
+            text += ' ('+self.specificity_text+')'
         if self.immaterial:
             text = '[!] ' + text
         return text
