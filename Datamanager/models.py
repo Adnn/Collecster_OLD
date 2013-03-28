@@ -134,6 +134,8 @@ def organize_tag(release_img, instance_img, qr_img, border=True):
 # Custom models
 #
 class Company(models.Model):
+    class Meta:
+        ordering = ('name',)
     name = models.CharField(max_length=60, unique=True)
 
     def __unicode__(self):
@@ -225,6 +227,8 @@ class Subtype:
         return tuple(others) + (('Accessory', tuple(accessories)),)
          
 class Concept(models.Model):
+    class Meta:
+        ordering = ('common_name',)
     common_name = models.CharField(max_length=60, unique=True)
     complete_name = models.CharField(max_length=180, unique=True, blank=True, null=True)
 
@@ -613,6 +617,16 @@ class BundlePicture(models.Model):
     bundle = models.ForeignKey(Bundle)
     image = models.ImageField(upload_to=name_bundlepicture)
 
+class BundleComposition(models.Model):
+    bundle = models.ForeignKey(Bundle)
+    instance = models.ForeignKey(Instance, unique=True)
+
+    @classmethod
+    def get_content_string(cls, bundle, limit=10):
+        return'(' + \
+            ', '.join(x.instance.instanciated_release.get_display_name() for x in cls.objects.filter(bundle=bundle)[:limit]) + \
+            ')'
+
 class Country:
     LITHUANIA = u'LT'
     FRANCE = u'FR'
@@ -682,14 +696,12 @@ class Buying(Bundle):
     context = models.ForeignKey(BuyingContext)
 
     def __unicode__(self):
-        return str(self.acquisition_date) + ' ' + str(self.context)
+        return str(self.acquisition_date) + ' ' + str(self.context) + ' ' + BundleComposition.get_content_string(self)
+
 
 class Donation(Bundle):
     donator = models.ForeignKey(Person)
 
-class BundleComposition(models.Model):
-    bundle = models.ForeignKey(Bundle)
-    instance = models.ForeignKey(Instance, unique=True)
 
 class Region:
     EUROPE = u'EU'
