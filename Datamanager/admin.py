@@ -70,6 +70,25 @@ class ConsoleAdmin(ReleaseAdmin):
 class GameAdmin(ReleaseAdmin):
     exclude = ()
 
+class DemoForm(ReleaseForm):
+    def __init__(self, *args, **kwargs):
+        super(DemoForm, self).__init__(*args, **kwargs)
+        #filter out the implicit attributes from the selectable list
+        game_qs = Concept.objects.filter(category = Subtype.GAME) 
+        self.fields['playable_games'].queryset = game_qs
+        self.fields['video_games'].queryset = game_qs
+
+class DemoAdmin(ReleaseAdmin):
+    form = DemoForm
+    filter_horizontal = ReleaseAdmin.filter_horizontal + [
+        'playable_games',
+        'video_games',
+    ]
+    pass
+
+class ApplicationAdmin(ReleaseAdmin):
+    pass
+
 #We change the SelectMultiple widget to show all available colors at once.
 class AccessoryForm(ReleaseForm):
     class Meta:
@@ -180,6 +199,8 @@ admin.site.register(Concept, ConceptAdmin)
 admin.site.register(ComboPack, ComboPackAdmin)
 admin.site.register(Console, ConsoleAdmin)
 admin.site.register(Game, GameAdmin)
+admin.site.register(Demo, DemoAdmin)
+admin.site.register(Application, ApplicationAdmin)
 admin.site.register(Accessory, AccessoryAdmin)
 admin.site.register(Platform, PlatformAdmin)
 admin.site.register(Attribute, AttributeAdmin)

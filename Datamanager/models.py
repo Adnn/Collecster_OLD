@@ -144,16 +144,29 @@ class Company(models.Model):
 class Subtype:
     class Category:
         CONSOLE = u'CONSOLE'
+        APPLICATION = u'APPLICATION'
+        DEMO = u'DEMO'
         GAME = u'GAME'
+        OS = u'OS'
         ACCESSORY = u'ACCESSORY'
         COMBO = u'COMBO'
+
+    class Group:
+        _TOPLEVEL = ''
+        ACCESSORY = u'Accessory'
+        SOFT = u'Software'
 
     #This option will not be in the choices on the webform : it will be used by the initial fixture to create the '_combopack_' concept
     COMBO = u'__COMBO'
     #We can use the category value, since it is a meaningfull name in these cases
     CONSOLE = Category.CONSOLE 
+    DEMO = Category.DEMO
     GAME = Category.GAME
+    OS = Category.OS
     
+#applications
+    WEB_BROWSER = u'WEB_BROWSER'
+
     ANALOG_PAD = u'ANALOG_PAD'
     BATTERY = u'BATTERY'
     BUZZER = u'BUZZER'
@@ -176,56 +189,68 @@ class Subtype:
     MULTITAP = u'MULTITAP'
     PAD = u'PAD'
     PAD_CHARGER = u'PAD_CHARGER'
+    RUMBLE = u'RUMBLE'
     SPEAKERS = u'SPEAKERS'
     STEERINGWHEEL = u'STEERINGWHEEL'
     STEREOGLASSES = u'STEREOGLASSES'
     TURNTABLE = u'TURNTABLE'
 
     DICT = {
-        CONSOLE : ('Console', Category.CONSOLE),
-        GAME : ('Game', Category.GAME),
+        CONSOLE : ('Console', Category.CONSOLE, Group._TOPLEVEL,),
 
-        ANALOG_PAD : ('Analog pad', Category.ACCESSORY),
-        BATTERY : ('Battery', Category.ACCESSORY),
-        BUZZER : ('Buzzer', Category.ACCESSORY),
-        CAMERA : ('Camera', Category.ACCESSORY),
-        COVER : ('Cover', Category.ACCESSORY),
-        DANCEMAT : ('Dancemat', Category.ACCESSORY),
-        DRUM : ('Drum', Category.ACCESSORY),
-        FISHING_ROD : ('Fishing rod', Category.ACCESSORY),
-        GESTURE_RECO : ('Gesture', Category.ACCESSORY),
-        GUITAR : ('Guitar', Category.ACCESSORY),
-        GUN : ('Gun', Category.ACCESSORY),
-        HEADPHONES : ('Headphones', Category.ACCESSORY),
-        JOYSTICK : ('Joystick', Category.ACCESSORY),
-        KEYBOARD : ('Keyboard', Category.ACCESSORY),
-        MAGNIFIER : ('Magnifier', Category.ACCESSORY),
-        MEMORYCARD : ('Memorycard', Category.ACCESSORY),
-        MICROPHONE : ('Microphone', Category.ACCESSORY),
-        MODEM : ('Modem', Category.ACCESSORY),
-        MOUSE : ('Mouse', Category.ACCESSORY),
-        MULTITAP : ('Multitap', Category.ACCESSORY),
-        PAD : ('Pad', Category.ACCESSORY),
-        PAD_CHARGER : ('Pad charger', Category.ACCESSORY),
-        SPEAKERS : ('Speakers', Category.ACCESSORY),
-        STEERINGWHEEL : ('Steeringwheel', Category.ACCESSORY),
-        STEREOGLASSES : ('Stereoglasses', Category.ACCESSORY),
-        TURNTABLE : ('Turntable', Category.ACCESSORY),
+        GAME : ('Game', Category.GAME, Group.SOFT,),
+        DEMO : ('Demo', Category.DEMO, Group.SOFT,),
+        WEB_BROWSER : ('Web browser', Category.APPLICATION, Group.SOFT,),
+        OS : ('OS', Category.OS, Group.SOFT,),
+
+        ANALOG_PAD : ('Analog pad', Category.ACCESSORY, Group.ACCESSORY,),
+        BATTERY : ('Battery', Category.ACCESSORY, Group.ACCESSORY,),
+        BUZZER : ('Buzzer', Category.ACCESSORY, Group.ACCESSORY,),
+        CAMERA : ('Camera', Category.ACCESSORY, Group.ACCESSORY,),
+        COVER : ('Cover', Category.ACCESSORY, Group.ACCESSORY,),
+        DANCEMAT : ('Dancemat', Category.ACCESSORY, Group.ACCESSORY,),
+        DRUM : ('Drum', Category.ACCESSORY, Group.ACCESSORY,),
+        FISHING_ROD : ('Fishing rod', Category.ACCESSORY, Group.ACCESSORY,),
+        GESTURE_RECO : ('Gesture', Category.ACCESSORY, Group.ACCESSORY,),
+        GUITAR : ('Guitar', Category.ACCESSORY, Group.ACCESSORY,),
+        GUN : ('Gun', Category.ACCESSORY, Group.ACCESSORY,),
+        HEADPHONES : ('Headphones', Category.ACCESSORY, Group.ACCESSORY,),
+        JOYSTICK : ('Joystick', Category.ACCESSORY, Group.ACCESSORY,),
+        KEYBOARD : ('Keyboard', Category.ACCESSORY, Group.ACCESSORY,),
+        MAGNIFIER : ('Magnifier', Category.ACCESSORY, Group.ACCESSORY,),
+        MEMORYCARD : ('Memorycard', Category.ACCESSORY, Group.ACCESSORY,),
+        MICROPHONE : ('Microphone', Category.ACCESSORY, Group.ACCESSORY,),
+        MODEM : ('Modem', Category.ACCESSORY, Group.ACCESSORY,),
+        MOUSE : ('Mouse', Category.ACCESSORY, Group.ACCESSORY,),
+        MULTITAP : ('Multitap', Category.ACCESSORY, Group.ACCESSORY,),
+        PAD : ('Pad', Category.ACCESSORY, Group.ACCESSORY,),
+        PAD_CHARGER : ('Pad charger', Category.ACCESSORY, Group.ACCESSORY,),
+        RUMBLE : ('Rumble pack', Category.ACCESSORY, Group.ACCESSORY,),
+        SPEAKERS : ('Speakers', Category.ACCESSORY, Group.ACCESSORY,),
+        STEERINGWHEEL : ('Steeringwheel', Category.ACCESSORY, Group.ACCESSORY,),
+        STEREOGLASSES : ('Stereoglasses', Category.ACCESSORY, Group.ACCESSORY,),
+        TURNTABLE : ('Turntable', Category.ACCESSORY, Group.ACCESSORY,),
      }
 
     @classmethod
     def get_choices(cls, max_len):
-        accessories = []
-        others = []
+        toplevel = []
+        dico = {}
         for key, value in cls.DICT.items():
             if (len(value[0])>max_len):
                 raise Exception('Value : ' + value[0] + ' exceeds the maximum length for the field ('+str(max_len)+').')
-            if value[1]==cls.Category.ACCESSORY:
-                accessories.append((key, value[0]))
+            if not value[2]:
+                appendee = toplevel
             else:
-                others.append((key, value[0]))
-        return tuple(others) + (('Accessory', tuple(accessories)),)
-         
+                try:
+                    appendee = dico[value[2]]
+                except KeyError:
+                    dico[value[2]] = []
+                    appendee = dico[value[2]]
+
+            appendee.append((key, value[0],))
+        return tuple(toplevel) + tuple([(group, tuple(tuples)) for group, tuples in dico.items()])
+           
 class Concept(models.Model):
     class Meta:
         ordering = ('common_name',)
@@ -361,7 +386,11 @@ class Release(models.Model):
             text += ' ('+self.specificity_text+')'
         if self.immaterial:
             text = '[!] ' + text
-        return text
+        return self.get_unicode_complement(text)
+
+# A hook for Release's subclasses
+    def get_unicode_complement(self, parent_text):
+        return parent_text
 
     def get_display_name(self):
         return self.name or self.realised_concept.common_name
@@ -496,7 +525,7 @@ class Instance(InstanceParent):
     lastmodif_date = models.DateTimeField(auto_now=True)
 
     def __unicode__(self):
-        return str(self.id)+' '+unicode(self.instanciated_release)
+        return unicode(self.id)+' '+unicode(self.instanciated_release)
 
     def generate_tag(self):
         border = True
@@ -686,7 +715,7 @@ class BuyingContext(models.Model):
         if self.complement:
             value += ', ' + self.complement
         if self.location:
-            value += ', ' + str(self.location)
+            value += ', ' + unicode(self.location)
         return value
 
 class Buying(Bundle):
@@ -696,7 +725,7 @@ class Buying(Bundle):
     context = models.ForeignKey(BuyingContext)
 
     def __unicode__(self):
-        return str(self.acquisition_date) + ' ' + str(self.context) + ' ' + BundleComposition.get_content_string(self)
+        return unicode(self.acquisition_date) + ' ' + unicode(self.context) + ' ' + BundleComposition.get_content_string(self)
 
 
 class Donation(Bundle):
@@ -869,7 +898,7 @@ class Console(Release):
     constructor = models.ForeignKey(Company, blank=True, null=True)
 
     def __unicode__(self):
-        return '[console] ' + str(self.id) + ' ' + super(Console, self).__unicode__()
+        return '[console] ' + unicode(self.id) + ' ' + super(Console, self).__unicode__()
 
     def get_tag_complement(self):
         complement = '[' + self.region + ']'
@@ -896,6 +925,59 @@ class Game(Release):
     region = models.CharField(max_length=2, choices=Region.CHOICES) 
     platform = models.ForeignKey(Platform)
     publisher = models.ForeignKey(Company, blank=True, null=True)
+
+    def get_tag_complement(self):
+        complement = '[%s] %s' % (self.region, self.platform.abbreviated or self.platform.name)
+        if self.loose:
+            complement += ' '+settings.STR_LOOSE
+        return complement
+
+class DemoSpecifics(WorkingSpecifics):
+    pass
+
+# \todo : When moving to Django >=1.6, InheritanceManager(django-model-utils) will support several level of model inheritance. The Demo will be able to inherit from Game (or a common ancestor)
+class Demo(Release):
+    class Dna:
+        specifics = DemoSpecifics
+        category = Subtype.Category.DEMO 
+        name_color = u'palegreen'
+        implicit_attributes = (
+            ({'name':u'self', 'category__name':u'content'}, 1),
+        )
+
+    issue_number = models.PositiveIntegerField(blank=True, null=True)
+    loose = models.BooleanField()
+    region = models.CharField(max_length=2, choices=Region.CHOICES) 
+    platform = models.ForeignKey(Platform)
+    publisher = models.ForeignKey(Company, blank=True, null=True)
+
+    playable_games = models.ManyToManyField(Concept, blank=True, related_name='demo_playable_game')
+    video_games = models.ManyToManyField(Concept, blank=True, related_name='demo_video_game')
+
+    def get_tag_complement(self):
+        complement = '[%s] %s' % (self.region, self.platform.abbreviated or self.platform.name)
+        if self.loose:
+            complement += ' '+settings.STR_LOOSE
+        return complement
+
+class ApplicationSpecifics(WorkingSpecifics):
+    pass
+
+class Application(Release):
+    class Dna:
+        specifics = ApplicationSpecifics
+        category = Subtype.Category.APPLICATION 
+        name_color = u'purple'
+        implicit_attributes = (
+            ({'name':u'self', 'category__name':u'content'}, 1),
+        )
+
+    loose = models.BooleanField()
+    region = models.CharField(max_length=2, choices=Region.CHOICES) 
+    platform = models.ForeignKey(Platform)
+    publisher = models.ForeignKey(Company, blank=True, null=True)
+
+    version = models.CharField(max_length=20, blank=True, null=True)
 
     def get_tag_complement(self):
         complement = '[%s] %s' % (self.region, self.platform.abbreviated or self.platform.name)
@@ -931,6 +1013,12 @@ class Accessory(Release):
     force_feedback = models.BooleanField()
     rumble_feedback = models.BooleanField()
 
+    def get_unicode_complement(self, parent_text):
+        if (self.version):
+            return parent_text + u' ver.' + unicode(self.version)
+        else:
+            return parent_text
+
     def get_tag_complement(self):
         complement = ''
         if self.region:
@@ -940,6 +1028,10 @@ class Accessory(Release):
         complement += ' '
         complement += '/'.join([color.name.lower() for color in self.colors.all()])
 
+        if self.version:
+            complement += ' v.'+self.version
+
         if self.loose:
             complement += ' '+settings.STR_LOOSE
+
         return complement
