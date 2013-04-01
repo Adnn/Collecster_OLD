@@ -591,6 +591,7 @@ class PictureDetail():
     SIDE = u'SID'
     SIDE_LABEL = u'SLB'
     INSIDE = u'INS'
+    DEFECT = u'DEF'
 
     DICT = {
         GROUP : (u'Group',),
@@ -599,6 +600,7 @@ class PictureDetail():
         SIDE : (u'Side',),
         SIDE_LABEL : (u'Side label',),
         INSIDE : (u'Inside',),
+        DEFECT : (u'Defect',),
     }
 
     @classmethod
@@ -873,7 +875,7 @@ class ComboPack(Release):
         complement_text = ''
         if self.region:
             complement_text += '[' + self.region + '] '
-        complement += 'combopack'
+        complement_text += 'combopack'
         return complement_text
 
 class ConsoleSpecifics(WorkingSpecifics):
@@ -954,8 +956,16 @@ class Demo(Release):
     playable_games = models.ManyToManyField(Concept, blank=True, related_name='demo_playable_game')
     video_games = models.ManyToManyField(Concept, blank=True, related_name='demo_video_game')
 
+    def get_unicode_complement(self, parent_text):
+        if self.issue_number:
+            return '%s vol.%d'%(parent_text, self.issue_number)
+        else:
+            return parent_text
+
     def get_tag_complement(self):
         complement = '[%s] %s' % (self.region, self.platform.abbreviated or self.platform.name)
+        if self.issue_number:
+            complement += ' vol.%d'%(self.issue_number)
         if self.loose:
             complement += ' '+settings.STR_LOOSE
         return complement
@@ -1015,9 +1025,11 @@ class Accessory(Release):
 
     def get_unicode_complement(self, parent_text):
         if (self.version):
-            return parent_text + u' ver.' + unicode(self.version)
-        else:
-            return parent_text
+            parent_text += u' ver.' + unicode(self.version)
+        if self.loose:
+            parent_text += ' l00se' 
+
+        return parent_text
 
     def get_tag_complement(self):
         complement = ''
