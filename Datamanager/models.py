@@ -165,7 +165,9 @@ class Subtype:
     OS = Category.OS
     
 #applications
+    ADD_ON = u'ADD_ON'
     WEB_BROWSER = u'WEB_BROWSER'
+    MEDIA = u'MEDIA'
 
     ANALOG_PAD = u'ANALOG_PAD'
     BATTERY = u'BATTERY'
@@ -194,14 +196,17 @@ class Subtype:
     STEERINGWHEEL = u'STEERINGWHEEL'
     STEREOGLASSES = u'STEREOGLASSES'
     TURNTABLE = u'TURNTABLE'
+    CHEAT_DEV = u'CHEAT_DEV'
 
     DICT = {
         CONSOLE : ('Console', Category.CONSOLE, Group._TOPLEVEL,),
 
         GAME : ('Game', Category.GAME, Group.SOFT,),
+        ADD_ON : ('Add-on', Category.GAME, Group.SOFT,),
         DEMO : ('Demo', Category.DEMO, Group.SOFT,),
         WEB_BROWSER : ('Web browser', Category.APPLICATION, Group.SOFT,),
-        OS : ('OS', Category.OS, Group.SOFT,),
+        OS : ('OS', Category.APPLICATION, Group.SOFT,),
+        MEDIA : ('Media', Category.APPLICATION, Group.SOFT,),
 
         ANALOG_PAD : ('Analog pad', Category.ACCESSORY, Group.ACCESSORY,),
         BATTERY : ('Battery', Category.ACCESSORY, Group.ACCESSORY,),
@@ -230,6 +235,7 @@ class Subtype:
         STEERINGWHEEL : ('Steeringwheel', Category.ACCESSORY, Group.ACCESSORY,),
         STEREOGLASSES : ('Stereoglasses', Category.ACCESSORY, Group.ACCESSORY,),
         TURNTABLE : ('Turntable', Category.ACCESSORY, Group.ACCESSORY,),
+        CHEAT_DEV : ('Cheating device', Category.ACCESSORY, Group.ACCESSORY,),
      }
 
     @classmethod
